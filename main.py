@@ -4,14 +4,28 @@ from datetime import datetime
 # إعدادات واجهة البرنامج
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
-# تنسيق الديزاين والجدول
+# تنسيق الديزاين وتوزيع مساحات الجدول بدقة
 st.markdown("""
     <style>
     .reportview-container .main .block-container { direction: rtl; }
-    table { width: 100% !important; direction: rtl; border-collapse: collapse; margin-top: 10px; }
+    
+    /* هندسة الجدول: توسيع الصنف وتصغير الأرقام */
+    table { width: 100% !important; direction: rtl; border-collapse: collapse; table-layout: fixed; }
+    
+    /* توزيع العرض: الصنف 50%، الباقي موزعين */
+    th:nth-child(1) { width: 5% !important; }  /* خانة الرقم التسلسلي */
+    th:nth-child(2) { width: 50% !important; } /* خانة الصنف - الأكبر */
+    th:nth-child(3) { width: 10% !important; } /* العدد */
+    th:nth-child(4) { width: 10% !important; } /* السعر */
+    th:nth-child(5) { width: 10% !important; } /* VAT */
+    th:nth-child(6) { width: 15% !important; } /* الإجمالي */
+
     th { background-color: #1a1c23 !important; color: white !important; text-align: center !important; 
-         padding: 10px !important; border: 1px solid #ffffff !important; font-size: 14px; }
-    td { text-align: center !important; padding: 8px !important; border: 1px solid #444444 !important; color: white; }
+         padding: 8px !important; border: 1px solid #ffffff !important; font-size: 13px; white-space: nowrap; }
+    
+    td { text-align: center !important; padding: 6px !important; border: 1px solid #444444 !important; 
+         color: white; font-size: 14px; word-wrap: break-word; }
+
     .right-text { text-align: right; direction: rtl; }
     .customer-header { font-size: 30px; font-weight: bold; color: #ffffff; margin-bottom: 0px; }
     .bill-info { font-size: 18px; color: #bbbbbb; margin-bottom: 5px; }
@@ -19,13 +33,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. نظام تسجيل الدخول وإدارة أرقام الفواتير
+# 1. المندوبين وإدارة الفواتير
 users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
 
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
-# إنشاء عداد فواتير مستقل لكل مندوب (مؤقت حالياً)
 if 'bill_counters' not in st.session_state:
     st.session_state.bill_counters = {user: 1 for user in users}
 
@@ -66,7 +79,7 @@ else:
     selected_items = []
     total_usd = 0.0
     total_vat_usd = 0.0
-    items_count = 0 # عداد الأصناف المطلوبة
+    items_count = 0
 
     st.subheader("إدخال الطلبية")
     for p, price in products.items():
@@ -76,8 +89,9 @@ else:
             item_vat = (sub * 0.11) if "*" in p else 0.0
             total_usd += sub
             total_vat_usd += item_vat
-            items_count += 1 # زيادة عداد الأصناف
+            items_count += 1
             selected_items.append({
+                "م": len(selected_items) + 1, # رقم تسلسلي صغير
                 "الصنف": p,
                 "العدد": qty,
                 "السعر $": f"{price:.2f}",
@@ -93,24 +107,15 @@ else:
     final_total_usd = total_after_discount + total_vat_usd
     vat_ll = total_vat_usd * rate
 
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        show_view = st.button("👁️ مشاهدة الفاتورة (Preview)")
-    with col_btn2:
-        save_bill = st.button("💾 حفظ الفاتورة")
-
-    if show_view:
+    if st.button("👁️ مشاهدة الفاتورة (Preview)"):
         if not customer_name:
             st.warning("الرجاء إدخال اسم الزبون!")
         elif not selected_items:
             st.warning("الفاتورة فارغة!")
         else:
             st.markdown("---")
-            
-            # الحصول على رقم الفاتورة الحالي للمندوب
             current_bill_no = st.session_state.bill_counters[st.session_state.user]
             
-            # رأس الفاتورة المعدل
             st.markdown(f"""
                 <div class="right-text">
                     <div class="customer-header">الزبون: {customer_name}</div>
@@ -121,10 +126,8 @@ else:
             
             st.table(selected_items)
             
-            # عرض عدد الأصناف تحت الجدول مباشرة
             st.markdown(f"<div class='right-text'><b>عدد الأصناف: {items_count}</b></div>", unsafe_allow_html=True)
             
-            # المبالغ النهائية
             st.markdown(f"""
                 <div class="right-text total-box">
                     <p>المجموع الأساسي: ${total_usd:.2f}</p>
@@ -136,11 +139,8 @@ else:
             """, unsafe_allow_html=True)
             st.markdown("---")
 
-    if save_bill:
+    if st.button("💾 حفظ الفاتورة"):
         if customer_name and selected_items:
-            # زيادة رقم الفاتورة للمندوب الحالي بعد الحفظ
             st.session_state.bill_counters[st.session_state.user] += 1
             st.balloons()
-            st.success(f"تم حفظ فاتورة {customer_name} بنجاح!")
-        else:
-            st.error("تأكد من البيانات!")
+            st.success("تم الحفظ بنجاح!")
