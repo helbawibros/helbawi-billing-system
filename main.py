@@ -4,43 +4,40 @@ from datetime import datetime
 # إعدادات واجهة البرنامج
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
-# تنسيق الديزاين وتوزيع مساحات الجدول بدقة
+# هندسة الجدول الصحيحة - منع تداخل الأعمدة
 st.markdown("""
     <style>
     .reportview-container .main .block-container { direction: rtl; }
     
-    /* هندسة الجدول: توسيع الصنف وتصغير الأرقام */
-    table { width: 100% !important; direction: rtl; border-collapse: collapse; table-layout: fixed; }
+    /* ضبط عرض الأعمدة بدقة بالبيكسل وليس المئوية لتجنب المفاجآت */
+    table { width: 100% !important; direction: rtl; border-collapse: collapse; table-layout: auto; }
     
-    /* توزيع العرض: الصنف 50%، الباقي موزعين */
-    th:nth-child(1) { width: 5% !important; }  /* خانة الرقم التسلسلي */
-    th:nth-child(2) { width: 50% !important; } /* خانة الصنف - الأكبر */
-    th:nth-child(3) { width: 10% !important; } /* العدد */
-    th:nth-child(4) { width: 10% !important; } /* السعر */
-    th:nth-child(5) { width: 10% !important; } /* VAT */
-    th:nth-child(6) { width: 15% !important; } /* الإجمالي */
+    th, td { border: 1px solid #ffffff !important; text-align: center !important; padding: 8px !important; color: white; }
+    th { background-color: #1a1c23 !important; font-size: 13px; }
 
-    th { background-color: #1a1c23 !important; color: white !important; text-align: center !important; 
-         padding: 8px !important; border: 1px solid #ffffff !important; font-size: 13px; white-space: nowrap; }
+    /* إجبار الصنف أن يكون عريضاً ومفروداً */
+    td:nth-child(2), th:nth-child(2) { 
+        min-width: 200px !important; 
+        text-align: right !important; 
+        white-space: nowrap !important; 
+    }
     
-    td { text-align: center !important; padding: 6px !important; border: 1px solid #444444 !important; 
-         color: white; font-size: 14px; word-wrap: break-word; }
+    /* تصغير خانة الرقم المسلسل والعدد */
+    td:nth-child(1), th:nth-child(1),
+    td:nth-child(3), th:nth-child(3) { 
+        width: 40px !important; 
+    }
 
     .right-text { text-align: right; direction: rtl; }
-    .customer-header { font-size: 30px; font-weight: bold; color: #ffffff; margin-bottom: 0px; }
-    .bill-info { font-size: 18px; color: #bbbbbb; margin-bottom: 5px; }
-    .total-box { border-top: 2px solid #ffffff; padding-top: 10px; margin-top: 15px; }
+    .customer-header { font-size: 30px; font-weight: bold; color: #ffffff; }
+    .bill-info { font-size: 18px; color: #bbbbbb; }
     </style>
     """, unsafe_allow_html=True)
 
-# 1. المندوبين وإدارة الفواتير
+# نظام الدخول والفواتير
 users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
-
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-if 'bill_counters' not in st.session_state:
-    st.session_state.bill_counters = {user: 1 for user in users}
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'bill_counters' not in st.session_state: st.session_state.bill_counters = {user: 1 for user in users}
 
 if not st.session_state.logged_in:
     st.title("🔐 دخول المندوبين")
@@ -54,16 +51,11 @@ if not st.session_state.logged_in:
         else: st.error("خطأ!")
 else:
     st.title("📄 فاتورة بيع جديدة")
-    
     col_cust1, col_cust2 = st.columns(2)
-    with col_cust1:
-        customer_id = st.text_input("رقم الحساب (ID)")
-    with col_cust2:
-        customer_name = st.text_input("اسم الزبون")
-    
+    with col_cust1: customer_id = st.text_input("رقم الحساب (ID)")
+    with col_cust2: customer_name = st.text_input("اسم الزبون")
     rate = st.number_input("سعر صرف الضريبة (L.L)", value=89500)
 
-    # الأصناف
     products = {
         "حمص رقم 12 907غ": 2.25,
         "حمص رقم 9 907غ": 2.00,
@@ -91,7 +83,7 @@ else:
             total_vat_usd += item_vat
             items_count += 1
             selected_items.append({
-                "م": len(selected_items) + 1, # رقم تسلسلي صغير
+                "م": len(selected_items) + 1,
                 "الصنف": p,
                 "العدد": qty,
                 "السعر $": f"{price:.2f}",
@@ -101,25 +93,21 @@ else:
 
     st.divider()
     discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, value=0.0)
-    
     discount_amount = total_usd * (discount_percent / 100)
     total_after_discount = total_usd - discount_amount
     final_total_usd = total_after_discount + total_vat_usd
     vat_ll = total_vat_usd * rate
 
     if st.button("👁️ مشاهدة الفاتورة (Preview)"):
-        if not customer_name:
-            st.warning("الرجاء إدخال اسم الزبون!")
-        elif not selected_items:
-            st.warning("الفاتورة فارغة!")
+        if not customer_name: st.warning("أدخل اسم الزبون!")
+        elif not selected_items: st.warning("الفاتورة فارغة!")
         else:
             st.markdown("---")
-            current_bill_no = st.session_state.bill_counters[st.session_state.user]
-            
+            curr_bill = st.session_state.bill_counters[st.session_state.user]
             st.markdown(f"""
                 <div class="right-text">
                     <div class="customer-header">الزبون: {customer_name}</div>
-                    <div class="bill-info">رقم الحساب: {customer_id} | <b>رقم الفاتورة: {current_bill_no}</b></div>
+                    <div class="bill-info">رقم الحساب: {customer_id} | <b>رقم الفاتورة: {curr_bill}</b></div>
                     <div class="bill-info">المندوب: {st.session_state.user} | التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M:%S")}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -127,20 +115,17 @@ else:
             st.table(selected_items)
             
             st.markdown(f"<div class='right-text'><b>عدد الأصناف: {items_count}</b></div>", unsafe_allow_html=True)
-            
             st.markdown(f"""
-                <div class="right-text total-box">
+                <div class="right-text" style="border-top: 2px solid white; padding-top:10px;">
                     <p>المجموع الأساسي: ${total_usd:.2f}</p>
                     <p>الحسم ({discount_percent}%): -${discount_amount:.2f}</p>
                     <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
-                    <h1 style='color: #4CAF50; font-size: 40px; margin-top:5px;'>الصافي: ${final_total_usd:.2f}</h1>
-                    <h2 style='color: #1E90FF; margin-top:0px;'>VAT L.L: {vat_ll:,.0f} ل.ل</h2>
+                    <h1 style='color: #4CAF50;'>الصافي: ${final_total_usd:.2f}</h1>
+                    <h2 style='color: #1E90FF;'>VAT L.L: {vat_ll:,.0f} ل.ل</h2>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown("---")
 
     if st.button("💾 حفظ الفاتورة"):
         if customer_name and selected_items:
             st.session_state.bill_counters[st.session_state.user] += 1
-            st.balloons()
-            st.success("تم الحفظ بنجاح!")
+            st.success("تم الحفظ!")
