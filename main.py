@@ -2,14 +2,20 @@ import streamlit as st
 from datetime import datetime
 
 # إعدادات واجهة البرنامج
-st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="centered")
+st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
-# CSS لتحسين مظهر الجدول وجعل النصوص جهة اليمين
+# تصحيح الديزاين بالكامل - CSS
 st.markdown("""
     <style>
     .reportview-container .main .block-container { direction: rtl; }
-    th { background-color: #f0f2f6 !important; }
-    td, th { text-align: right !important; white-space: nowrap; }
+    /* تنسيق الجدول ليظهر بوضوح */
+    table { width: 100% !important; direction: rtl; border-collapse: collapse; }
+    th { background-color: #262730 !important; color: white !important; text-align: right !important; padding: 10px !important; }
+    td { text-align: right !important; padding: 8px !important; border-bottom: 1px solid #444; }
+    /* تنسيق نصوص اليمين */
+    .right-text { text-align: right; direction: rtl; }
+    .customer-header { font-size: 28px; font-weight: bold; color: #ffffff; margin-bottom: 5px; }
+    .customer-sub { font-size: 20px; color: #cccccc; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -32,7 +38,6 @@ if not st.session_state.logged_in:
 else:
     st.title("📄 فاتورة بيع جديدة")
     
-    # مدخلات الزبون (على اليمين)
     col_cust1, col_cust2 = st.columns(2)
     with col_cust1:
         customer_id = st.text_input("رقم الزبون (ID)")
@@ -69,13 +74,13 @@ else:
             selected_items.append({
                 "الصنف": p,
                 "الكمية": qty,
-                "السعر": f"{price:.2f}",
-                "VAT": f"{item_vat:.2f}",
-                "الإجمالي": f"{(sub + item_vat):.2f}"
+                "السعر $": f"{price:.2f}",
+                "VAT $": f"{item_vat:.2f}",
+                "الإجمالي $": f"{(sub + item_vat):.2f}"
             })
 
     st.divider()
-    discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, max_value=100.0, step=0.5)
+    discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, value=0.0)
     
     discount_amount = total_usd * (discount_percent / 100)
     total_after_discount = total_usd - discount_amount
@@ -89,21 +94,29 @@ else:
             st.warning("الفاتورة فارغة!")
         else:
             st.markdown("---")
-            # عرض اسم الزبون بخط كبير جهة اليمين
-            st.markdown(f"<div style='text-align: right;'><h2>الزبون: {customer_name}</h2><h3>رقم الحساب: {customer_id}</h3></div>", unsafe_allow_html=True)
+            
+            # رأس الفاتورة - أقصى اليمين
+            st.markdown(f"""
+                <div class="right-text">
+                    <div class="customer-header">الزبون: {customer_name}</div>
+                    <div class="customer-sub">رقم الحساب: {customer_id}</div>
+                </div>
+            """, unsafe_allow_html=True)
             
             now = datetime.now().strftime("%Y-%m-%d | %H:%M:%S")
-            st.write(f"**التاريخ:** {now} | **المندوب:** {st.session_state.user}")
+            st.markdown(f"<p class='right-text'><b>التاريخ:</b> {now} | <b>المندوب:</b> {st.session_state.user}</p>", unsafe_allow_html=True)
             
+            # عرض الجدول المعدل
             st.table(selected_items)
             
+            # ملخص المبالغ - جهة اليمين
             st.markdown(f"""
-            <div style='text-align: right;'>
-            <p>المجموع: ${total_usd:.2f}</p>
-            <p>الحسم ({discount_percent}%): -${discount_amount:.2f}</p>
-            <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
-            <h2 style='color: green;'>الصافي النهائي: ${final_total_usd:.2f}</h2>
-            <h3 style='color: blue;'>VAT L.L: {vat_ll:,.0f} ل.ل</h3>
-            </div>
+                <div class="right-text">
+                    <p>المجموع الأساسي: ${total_usd:.2f}</p>
+                    <p>الحسم ({discount_percent}%): -${discount_amount:.2f}</p>
+                    <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
+                    <h1 style='color: #4CAF50;'>الصافي النهائي: ${final_total_usd:.2f}</h1>
+                    <h2 style='color: #1E90FF;'>VAT L.L: {vat_ll:,.0f} ل.ل</h2>
+                </div>
             """, unsafe_allow_html=True)
             st.markdown("---")
