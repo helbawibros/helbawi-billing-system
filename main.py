@@ -2,7 +2,16 @@ import streamlit as st
 from datetime import datetime
 
 # إعدادات واجهة البرنامج
-st.set_page_config(page_title="نظام فواتير حلباوي", layout="centered")
+st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="centered")
+
+# CSS لتحسين مظهر الجدول وجعل النصوص جهة اليمين
+st.markdown("""
+    <style>
+    .reportview-container .main .block-container { direction: rtl; }
+    th { background-color: #f0f2f6 !important; }
+    td, th { text-align: right !important; white-space: nowrap; }
+    </style>
+    """, unsafe_allow_html=True)
 
 # 1. قائمة المندوبين
 users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
@@ -21,13 +30,18 @@ if not st.session_state.logged_in:
             st.rerun()
         else: st.error("خطأ!")
 else:
-    st.title("📄 إنشاء فاتورة")
-    st.sidebar.write(f"👤 المندوب: {st.session_state.user}")
+    st.title("📄 فاتورة بيع جديدة")
+    
+    # مدخلات الزبون (على اليمين)
+    col_cust1, col_cust2 = st.columns(2)
+    with col_cust1:
+        customer_id = st.text_input("رقم الزبون (ID)")
+    with col_cust2:
+        customer_name = st.text_input("اسم الزبون / المحل")
     
     rate = st.number_input("سعر صرف الضريبة (L.L)", value=89500)
-    customer = st.text_input("اسم الزبون / المحل")
 
-    # الأصناف (النجمة تعني خاضع للضريبة)
+    # الأصناف
     products = {
         "حمص رقم 12 907غ": 2.25,
         "حمص رقم 9 907غ": 2.00,
@@ -49,69 +63,47 @@ else:
         qty = st.number_input(f"{p} (${price})", min_value=0, step=1, key=p)
         if qty > 0:
             sub = qty * price
-            item_vat = 0.0
-            if "*" in p:
-                item_vat = sub * 0.11
-            
+            item_vat = (sub * 0.11) if "*" in p else 0.0
             total_usd += sub
             total_vat_usd += item_vat
-            
-            # إضافة البيانات للجدول بالترتيب المطلوب
             selected_items.append({
                 "الصنف": p,
-                "العدد": qty,
-                "السعر ($)": f"{price:.2f}",
-                "VAT ($)": f"{item_vat:.2f}", # الخانة الجديدة
-                "الإجمالي ($)": f"{(sub + item_vat):.2f}"
+                "الكمية": qty,
+                "السعر": f"{price:.2f}",
+                "VAT": f"{item_vat:.2f}",
+                "الإجمالي": f"{(sub + item_vat):.2f}"
             })
 
     st.divider()
+    discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, max_value=100.0, step=0.5)
     
-    # خانة الحسم %
-    discount_percent = st.number_input("نسبة الحسم % (Discount)", min_value=0.0, max_value=100.0, step=0.5, value=0.0)
     discount_amount = total_usd * (discount_percent / 100)
-    
-    # الحسابات النهائية
     total_after_discount = total_usd - discount_amount
     final_total_usd = total_after_discount + total_vat_usd
     vat_ll = total_vat_usd * rate
 
-    # أزرار التحكم
-    col1, col2 = st.columns(2)
-    with col1:
-        show_view = st.button("👁️ مشاهده الفاتورة (Preview)")
-    with col2:
-        save_bill = st.button("💾 حفظ وطباعة")
-
-    if show_view:
-        if not customer:
-            st.warning("الرجاء إدخال اسم الزبون أولاً!")
+    if st.button("👁️ مشاهدة الفاتورة (Preview)"):
+        if not customer_name or not customer_id:
+            st.warning("الرجاء إدخال اسم ورقم الزبون!")
         elif not selected_items:
             st.warning("الفاتورة فارغة!")
         else:
             st.markdown("---")
-            st.subheader("🔍 مراجعة الفاتورة")
+            # عرض اسم الزبون بخط كبير جهة اليمين
+            st.markdown(f"<div style='text-align: right;'><h2>الزبون: {customer_name}</h2><h3>رقم الحساب: {customer_id}</h3></div>", unsafe_allow_html=True)
             
             now = datetime.now().strftime("%Y-%m-%d | %H:%M:%S")
-            st.write(f"**الزبون:** {customer} | **التاريخ:** {now}")
+            st.write(f"**التاريخ:** {now} | **المندوب:** {st.session_state.user}")
             
-            # عرض الجدول مع عمود VAT
             st.table(selected_items)
             
-            # ملخص المبالغ
-            st.write(f"المجموع (قبل الحسم والضريبة): **${total_usd:.2f}**")
-            if discount_percent > 0:
-                st.write(f"الحسم ({discount_percent}%): **-${discount_amount:.2f}**")
-                st.write(f"المجموع بعد الحسم: **${total_after_discount:.2f}**")
-            
-            st.write(f"إجمالي الضريبة (VAT 11%): **${total_vat_usd:.2f}**")
-            st.success(f"الصافي النهائي المطلوب: **${final_total_usd:.2f}**")
-            st.info(f"قيمة الضريبة بالليرة (VAT L.L): **{vat_ll:,.0f} L.L**")
+            st.markdown(f"""
+            <div style='text-align: right;'>
+            <p>المجموع: ${total_usd:.2f}</p>
+            <p>الحسم ({discount_percent}%): -${discount_amount:.2f}</p>
+            <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
+            <h2 style='color: green;'>الصافي النهائي: ${final_total_usd:.2f}</h2>
+            <h3 style='color: blue;'>VAT L.L: {vat_ll:,.0f} ل.ل</h3>
+            </div>
+            """, unsafe_allow_html=True)
             st.markdown("---")
-
-    if save_bill:
-        if customer and selected_items:
-            st.balloons()
-            st.success("تم الحفظ بنجاح!")
-        else:
-            st.error("تأكد من البيانات!")
