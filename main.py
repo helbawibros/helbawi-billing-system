@@ -1,10 +1,11 @@
 import streamlit as st
 from datetime import datetime
+import pandas as pd
+from streamlit_gsheets import GSheetsConnection
 
-# إعدادات واجهة البرنامج
+# 1. إعدادات واجهة البرنامج (الديزاين المعتمد)
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
-# تنسيق الديزاين والجدول
 st.markdown("""
     <style>
     .reportview-container .main .block-container { direction: rtl; }
@@ -19,13 +20,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. نظام تسجيل الدخول وإدارة أرقام الفواتير
-users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
+# 2. إنشاء اتصال بجدول البيانات
+conn = st.connection("gsheets", type=GSheetsConnection)
 
+# 3. نظام تسجيل الدخول
+users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
-
-# إنشاء عداد فواتير مستقل لكل مندوب (مؤقت حالياً)
 if 'bill_counters' not in st.session_state:
     st.session_state.bill_counters = {user: 1 for user in users}
 
@@ -40,7 +41,7 @@ if not st.session_state.logged_in:
             st.rerun()
         else: st.error("خطأ!")
 else:
-    st.title("📄 فاتورة بيع جديدة")
+    st.title(f"📄 فاتورة جديدة: {st.session_state.user}")
     
     col_cust1, col_cust2 = st.columns(2)
     with col_cust1:
@@ -50,7 +51,7 @@ else:
     
     rate = st.number_input("سعر صرف الضريبة (L.L)", value=89500)
 
-    # الأصناف
+    # قائمة الأصناف
     products = {
         "حمص رقم 12 907غ": 2.25,
         "حمص رقم 9 907غ": 2.00,
@@ -66,7 +67,7 @@ else:
     selected_items = []
     total_usd = 0.0
     total_vat_usd = 0.0
-    items_count = 0 # عداد الأصناف المطلوبة
+    items_count = 0 
 
     st.subheader("إدخال الطلبية")
     for p, price in products.items():
@@ -76,71 +77,63 @@ else:
             item_vat = (sub * 0.11) if "*" in p else 0.0
             total_usd += sub
             total_vat_usd += item_vat
-            items_count += 1 # زيادة عداد الأصناف
+            items_count += 1 
             selected_items.append({
                 "الصنف": p,
                 "العدد": qty,
-                "السعر $": f"{price:.2f}",
-                "VAT $": f"{item_vat:.2f}",
-                "الإجمالي $": f"{(sub + item_vat):.2f}"
+                "السعر": f"{price:.2f}",
+                "VAT": f"{item_vat:.2f}",
+                "الإجمالي": f"{(sub + item_vat):.2f}"
             })
 
     st.divider()
     discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, value=0.0)
-    
     discount_amount = total_usd * (discount_percent / 100)
-    total_after_discount = total_usd - discount_amount
-    final_total_usd = total_after_discount + total_vat_usd
-    vat_ll = total_vat_usd * rate
+    final_total_usd = (total_usd - discount_amount) + total_vat_usd
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        show_view = st.button("👁️ مشاهدة الفاتورة (Preview)")
+        show_view = st.button("👁️ مشاهدة الفاتورة")
     with col_btn2:
-        save_bill = st.button("💾 حفظ الفاتورة")
+        save_bill = st.button("💾 حفظ وإرسال للشركة")
 
     if show_view:
-        if not customer_name:
-            st.warning("الرجاء إدخال اسم الزبون!")
-        elif not selected_items:
-            st.warning("الفاتورة فارغة!")
-        else:
+        if customer_name and selected_items:
             st.markdown("---")
-            
-            # الحصول على رقم الفاتورة الحالي للمندوب
             current_bill_no = st.session_state.bill_counters[st.session_state.user]
-            
-            # رأس الفاتورة المعدل
             st.markdown(f"""
                 <div class="right-text">
                     <div class="customer-header">الزبون: {customer_name}</div>
-                    <div class="bill-info">رقم الحساب: {customer_id} | <b>رقم الفاتورة: {current_bill_no}</b></div>
-                    <div class="bill-info">المندوب: {st.session_state.user} | التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M:%S")}</div>
+                    <div class="bill-info">رقم الحساب: {customer_id} | رقم الفاتورة: {current_bill_no}</div>
                 </div>
             """, unsafe_allow_html=True)
-            
             st.table(selected_items)
-            
-            # عرض عدد الأصناف تحت الجدول مباشرة
-            st.markdown(f"<div class='right-text'><b>عدد الأصناف: {items_count}</b></div>", unsafe_allow_html=True)
-            
-            # المبالغ النهائية
-            st.markdown(f"""
-                <div class="right-text total-box">
-                    <p>المجموع الأساسي: ${total_usd:.2f}</p>
-                    <p>الحسم ({discount_percent}%): -${discount_amount:.2f}</p>
-                    <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
-                    <h1 style='color: #4CAF50; font-size: 40px; margin-top:5px;'>الصافي: ${final_total_usd:.2f}</h1>
-                    <h2 style='color: #1E90FF; margin-top:0px;'>VAT L.L: {vat_ll:,.0f} ل.ل</h2>
-                </div>
-            """, unsafe_allow_html=True)
-            st.markdown("---")
+            st.write(f"**عدد الأصناف: {items_count}**")
+            st.success(f"الصافي النهائي: ${final_total_usd:.2f}")
 
     if save_bill:
         if customer_name and selected_items:
-            # زيادة رقم الفاتورة للمندوب الحالي بعد الحفظ
-            st.session_state.bill_counters[st.session_state.user] += 1
-            st.balloons()
-            st.success(f"تم حفظ فاتورة {customer_name} بنجاح!")
-        else:
-            st.error("تأكد من البيانات!")
+            # تجهيز البيانات لتطابق أعمدة ملف Google Sheet الخاص بك
+            new_data = []
+            for item in selected_items:
+                new_data.append({
+                    "التاريخ": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "المندوب": st.session_state.user,
+                    "رقم الفاتورة": st.session_state.bill_counters[st.session_state.user],
+                    "رقم الزبون": customer_id,
+                    "اسم الزبون": customer_name,
+                    "الصنف": item["الصنف"],
+                    "العدد": item["العدد"],
+                    "السعر": item["السعر"],
+                    "الإجمالي": item["الإجمالي"]
+                })
+            
+            # عملية الإرسال الفعلية للملف
+            try:
+                df_to_add = pd.DataFrame(new_data)
+                conn.create(worksheet="Sheet1", data=df_to_add) # سيقوم بالإضافة تحت البيانات الموجودة
+                st.session_state.bill_counters[st.session_state.user] += 1
+                st.balloons()
+                st.success("تم الحفظ بنجاح في Helbawi_Database!")
+            except Exception as e:
+                st.error("تأكد من إعدادات الربط (Secrets) وصلاحية المشاركة.")
