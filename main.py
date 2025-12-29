@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 
-# 1. إعدادات واجهة البرنامج (الديزاين المعتمد)
+# 1. إعدادات واجهة البرنامج
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
 st.markdown("""
@@ -20,7 +20,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. إنشاء اتصال بجدول البيانات
+# 2. اتصال قاعدة البيانات
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. نظام تسجيل الدخول
@@ -41,7 +41,7 @@ if not st.session_state.logged_in:
             st.rerun()
         else: st.error("خطأ!")
 else:
-    st.title(f"📄 فاتورة جديدة: {st.session_state.user}")
+    st.title(f"📄 فاتورة: {st.session_state.user}")
     
     col_cust1, col_cust2 = st.columns(2)
     with col_cust1:
@@ -51,17 +51,10 @@ else:
     
     rate = st.number_input("سعر صرف الضريبة (L.L)", value=89500)
 
-    # قائمة الأصناف
     products = {
-        "حمص رقم 12 907غ": 2.25,
-        "حمص رقم 9 907غ": 2.00,
-        "حمص كسر 1000غ": 1.60,
-        "فول حب 1000غ": 1.30,
-        "فول مجروش 1000غ": 1.75,
-        "فول عريض 1000غ": 2.30,
-        "سبع بهارات 50غ * 12 *": 10.00,
-        "فلفل اسود 50غ * 12 *": 13.00,
-        "بهار حلو 500غ *": 13.50
+        "حمص رقم 12 907غ": 2.25, "حمص رقم 9 907غ": 2.00, "حمص كسر 1000غ": 1.60,
+        "فول حب 1000غ": 1.30, "فول مجروش 1000غ": 1.75, "فول عريض 1000غ": 2.30,
+        "سبع بهارات 50غ * 12 *": 10.00, "فلفل اسود 50غ * 12 *": 13.00, "بهار حلو 500غ *": 13.50
     }
 
     selected_items = []
@@ -79,17 +72,18 @@ else:
             total_vat_usd += item_vat
             items_count += 1 
             selected_items.append({
-                "الصنف": p,
-                "العدد": qty,
-                "السعر": f"{price:.2f}",
-                "VAT": f"{item_vat:.2f}",
-                "الإجمالي": f"{(sub + item_vat):.2f}"
+                "الصنف": p, "العدد": qty, "السعر": f"{price:.2f}",
+                "VAT": f"{item_vat:.2f}", "الإجمالي": f"{(sub + item_vat):.2f}"
             })
 
     st.divider()
     discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, value=0.0)
+    
+    # العمليات الحسابية
     discount_amount = total_usd * (discount_percent / 100)
-    final_total_usd = (total_usd - discount_amount) + total_vat_usd
+    total_after_discount = total_usd - discount_amount
+    final_total_usd = total_after_discount + total_vat_usd
+    vat_ll = total_vat_usd * rate
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
@@ -107,13 +101,23 @@ else:
                     <div class="bill-info">رقم الحساب: {customer_id} | رقم الفاتورة: {current_bill_no}</div>
                 </div>
             """, unsafe_allow_html=True)
+            
             st.table(selected_items)
-            st.write(f"**عدد الأصناف: {items_count}**")
-            st.success(f"الصافي النهائي: ${final_total_usd:.2f}")
+            
+            st.markdown(f"""
+                <div class="right-text total-box">
+                    <p>المجموع الأساسي: ${total_usd:.2f}</p>
+                    <p>الحسم ({discount_percent}%): -${discount_amount:.2f}</p>
+                    <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
+                    <h1 style='color: #4CAF50; font-size: 35px; margin-top:5px;'>الصافي: ${final_total_usd:.2f}</h1>
+                    <h2 style='color: #1E90FF; margin-top:0px;'>VAT L.L: {vat_ll:,.0f} ل.ل</h2>
+                    <p><b>عدد الأصناف: {items_count}</b></p>
+                </div>
+            """, unsafe_allow_html=True)
 
     if save_bill:
         if customer_name and selected_items:
-            # تجهيز البيانات لتطابق أعمدة ملف Google Sheet الخاص بك
+            # تجهيز البيانات للإرسال
             new_data = []
             for item in selected_items:
                 new_data.append({
@@ -128,12 +132,12 @@ else:
                     "الإجمالي": item["الإجمالي"]
                 })
             
-            # عملية الإرسال الفعلية للملف
             try:
                 df_to_add = pd.DataFrame(new_data)
-                conn.create(worksheet="Sheet1", data=df_to_add) # سيقوم بالإضافة تحت البيانات الموجودة
+                # استخدام append بدلاً من create للحفاظ على البيانات القديمة
+                conn.append_records(df_to_add) 
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
-                st.success("تم الحفظ بنجاح في Helbawi_Database!")
-            except Exception as e:
-                st.error("تأكد من إعدادات الربط (Secrets) وصلاحية المشاركة.")
+                st.success("تم الحفظ بنجاح!")
+            except Exception:
+                st.error("خطأ: تأكد من وضع رابط الملف في إعدادات Secrets.")
