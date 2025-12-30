@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import random
 
-# الرابط الخاص بك (لا تغيره)
+# الرابط الخاص بك
 URL_LINK = "https://script.google.com/macros/s/AKfycbyaxdN2TPOOXsNSx8yy4eKBhLPccNe41wKR9MMw9QCM2HbEmJ-Oc6pqGfN5REY0OEratQ/exec"
 
 st.set_page_config(page_title="نظام حلباوي المحاسبي", layout="centered")
@@ -20,7 +20,14 @@ with st.form("billing_form", clear_on_submit=True):
 
     st.divider()
     
-    product = st.selectbox("الصنف", ["حمص رقم 12 907غ", "حمص رقم 9 907غ", "فول حب 1000غ"])
+    product = st.selectbox("الصنف", [
+        "حمص رقم 12 907غ", 
+        "حمص رقم 9 907غ", 
+        "حمص كسر 1000غ", 
+        "فول حب 1000غ", 
+        "فول مجروش 1000غ", 
+        "فول عريض 1000غ"
+    ])
     
     c3, c4 = st.columns(2)
     with c3:
@@ -28,8 +35,10 @@ with st.form("billing_form", clear_on_submit=True):
     with c4:
         quantity = st.number_input("العدد", min_value=1, step=1)
 
+    # حساب الإجمالي
     total_amount = price * quantity
-    st.info(### الإجمالي: {total_amount} ل.ل)
+    # تصحيح السطر الذي سبب المشكلة:
+    st.info(f"### الإجمالي: {total_amount} ل.ل")
 
     submit = st.form_submit_button("🚀 حفظ الفاتورة بالترتيب الجديد")
 
@@ -51,6 +60,6 @@ if submit:
                 st.balloons()
                 st.success(f"✅ تم الحفظ! الإجمالي {total_amount} سجل في العمود A")
         except Exception as e:
-            st.error(f"خطأ: {e}")
+            st.error(f"خطأ في الاتصال: {e}")
     else:
-        st.warning("يرجى التأكد من اسم الزبون والسعر")
+        st.warning("يرجى التأكد من إدخال اسم الزبون والسعر")
