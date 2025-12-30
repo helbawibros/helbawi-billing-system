@@ -60,7 +60,6 @@ else:
     selected_items = []
     total_usd = 0.0
     total_vat_usd = 0.0
-    items_count = 0 
 
     st.subheader("إدخال الطلبية")
     for p, price in products.items():
@@ -70,7 +69,6 @@ else:
             item_vat = (sub * 0.11) if "*" in p else 0.0
             total_usd += sub
             total_vat_usd += item_vat
-            items_count += 1 
             selected_items.append({
                 "الصنف": p, "العدد": qty, "السعر": f"{price:.2f}",
                 "VAT": f"{item_vat:.2f}", "الإجمالي": f"{(sub + item_vat):.2f}"
@@ -114,10 +112,8 @@ else:
             """, unsafe_allow_html=True)
 
     if save_bill:
-        if not customer_name:
-            st.warning("يرجى إدخال اسم الزبون أولاً!")
-        elif not selected_items:
-            st.warning("الفاتورة فارغة! يرجى اختيار أصناف.")
+        if not customer_name or not selected_items:
+            st.warning("يرجى ملء البيانات أولاً")
         else:
             new_data = []
             for item in selected_items:
@@ -135,9 +131,10 @@ else:
             
             try:
                 df_to_add = pd.DataFrame(new_data)
-                conn.append_records(df_to_add) 
+                # استخدام create هو الطريقة الصحيحة للتحديث
+                conn.create(data=df_to_add) 
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
                 st.success("تم الحفظ بنجاح في الجدول!")
             except Exception as e:
-                st.error(f"حدث خطأ فني: {e}")
+                st.error(f"خطأ فني: {e}")
