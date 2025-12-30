@@ -1,43 +1,62 @@
 import streamlit as st
-import pandas as pd
-from gspread_pandas import Spread
-from datetime import datetime
+import requests
 
-# إعداد الصفحة
-st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
+# هذا هو الرابط السحري الذي استخرجته أنت من صورك
+URL_LINK = "https://script.google.com/macros/s/AKfycyb8jgJRAQwW2oc4pOE4Med1pwb3NQ79m2p5f1q3-Wg9RfK4l6YkODMgWe6KGeRAY3HmA/exec"
 
-# رابط ملفك الذي جعلته "Anyone with the link can edit"
-# تأكد من وضع الرابط الخاص بك هنا
-file_url = "https://docs.google.com/spreadsheets/d/1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0/edit"
+st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="centered")
 
-st.title("📄 نظام تسجيل الطلبيات")
+# تصميم بسيط وواضح
+st.title("🚀 نظام تسجيل الطلبيات - حلباوي")
+st.markdown("---")
 
-# مدخلات بسيطة
-customer_name = st.text_input("اسم الزبون")
-product = st.selectbox("الصنف", ["حمص رقم 12", "حمص رقم 9", "فول حب"])
-qty = st.number_input("العدد", min_value=1)
+# نموذج إدخال البيانات داخل إطار (Form) لضمان الترتيب
+with st.form("order_form", clear_on_submit=True):
+    st.subheader("إدخال بيانات الزبون")
+    mandoub = st.selectbox("اسم المندوب", ["حسين", "علي", "مدير"])
+    customer = st.text_input("اسم الزبون (أو رقم الحساب)")
+    
+    st.divider()
+    
+    st.subheader("تفاصيل الطلبية")
+    product = st.selectbox("الصنف", [
+        "حمص رقم 12 907غ", 
+        "حمص رقم 9 907غ", 
+        "حمص كسر 1000غ", 
+        "فول حب 1000غ", 
+        "فول مجروش 1000غ", 
+        "فول عريض 1000غ"
+    ])
+    quantity = st.number_input("العدد (كمية)", min_value=1, step=1)
+    
+    # زر الحفظ
+    submit_button = st.form_submit_button("💾 حفظ وإرسال للشركة")
 
-if st.button("💾 حفظ وإرسال"):
-    if customer_name:
+# معالجة الضغط على الزر
+if submit_button:
+    if customer:
+        # تجهيز البيانات للإرسال إلى جوجل شيت
+        payload = {
+            "user": mandoub,
+            "customer": customer,
+            "item": product,
+            "qty": quantity
+        }
+        
         try:
-            # استخدام المكتبة للحفظ المباشر عبر الرابط العام
-            spread = Spread(file_url)
+            # إرسال البيانات للرابط الذي أنشأته
+            with st.spinner("جاري الحفظ..."):
+                response = requests.post(URL_LINK, json=payload)
             
-            # تجهيز البيانات
-            new_data = pd.DataFrame([{
-                "التاريخ": datetime.now().strftime("%Y-%m-%d"),
-                "الزبون": customer_name,
-                "الصنف": product,
-                "العدد": qty
-            }])
-            
-            # إضافة البيانات لآخر الملف
-            spread.df_to_sheet(new_data, index=False, sheet=0, start='A1', replace=False)
-            
-            st.balloons()
-            st.success("✅ تم الحفظ بنجاح في الإكسل!")
+            if response.status_code == 200:
+                st.balloons() # طيران البالونات احتفالاً بالنجاح!
+                st.success(f"✅ مبروك! تم تسجيل طلبية ({customer}) في ملف الإكسل بنجاح.")
+            else:
+                st.error("فشل في الاتصال، تأكد من أنك قمت بعمل Deploy بشكل صحيح.")
         except Exception as e:
-            st.error(f"حدث خطأ: {e}")
-            st.info("تأكد أن الملف في جوجل شيت مضبوط على: Anyone with the link can EDIT")
+            st.error(f"حدث خطأ غير متوقع: {e}")
     else:
-        st.warning("الرجاء إدخال اسم الزبون")
+        st.warning("⚠️ يرجى كتابة اسم الزبون قبل الحفظ.")
+
+st.markdown("---")
+st.caption("نظام حلباوي الخاص - يعمل مباشرة مع Google Sheets")
