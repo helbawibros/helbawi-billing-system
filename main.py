@@ -115,9 +115,9 @@ else:
         if not customer_name or not selected_items:
             st.warning("يرجى ملء البيانات أولاً")
         else:
-            new_data = []
+            new_rows = []
             for item in selected_items:
-                new_data.append({
+                new_rows.append({
                     "التاريخ": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "المندوب": st.session_state.user,
                     "رقم الفاتورة": st.session_state.bill_counters[st.session_state.user],
@@ -130,11 +130,17 @@ else:
                 })
             
             try:
-                df_to_add = pd.DataFrame(new_data)
-                # استخدام create هو الطريقة الصحيحة للتحديث
-                conn.create(data=df_to_add) 
+                # قراءة البيانات القديمة أولاً
+                existing_df = conn.read()
+                # إضافة البيانات الجديدة إليها
+                new_data_df = pd.DataFrame(new_rows)
+                updated_df = pd.concat([existing_df, new_data_df], ignore_index=True)
+                # تحديث الجدول بالبيانات كاملة
+                conn.update(data=updated_df)
+                
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
                 st.success("تم الحفظ بنجاح في الجدول!")
             except Exception as e:
-                st.error(f"خطأ فني: {e}")
+                st.error(f"خطأ في الحفظ: {e}")
+
