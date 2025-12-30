@@ -79,7 +79,6 @@ else:
     st.divider()
     discount_percent = st.number_input("نسبة الحسم %", min_value=0.0, value=0.0)
     
-    # العمليات الحسابية
     discount_amount = total_usd * (discount_percent / 100)
     total_after_discount = total_usd - discount_amount
     final_total_usd = total_after_discount + total_vat_usd
@@ -111,13 +110,15 @@ else:
                     <p>إجمالي الضريبة: ${total_vat_usd:.2f}</p>
                     <h1 style='color: #4CAF50; font-size: 35px; margin-top:5px;'>الصافي: ${final_total_usd:.2f}</h1>
                     <h2 style='color: #1E90FF; margin-top:0px;'>VAT L.L: {vat_ll:,.0f} ل.ل</h2>
-                    <p><b>عدد الأصناف: {items_count}</b></p>
                 </div>
             """, unsafe_allow_html=True)
 
     if save_bill:
-        if customer_name and selected_items:
-            # تجهيز البيانات للإرسال
+        if not customer_name:
+            st.warning("يرجى إدخال اسم الزبون أولاً!")
+        elif not selected_items:
+            st.warning("الفاتورة فارغة! يرجى اختيار أصناف.")
+        else:
             new_data = []
             for item in selected_items:
                 new_data.append({
@@ -132,14 +133,11 @@ else:
                     "الإجمالي": item["الإجمالي"]
                 })
             
-                    try:
+            try:
                 df_to_add = pd.DataFrame(new_data)
-                # إرسال البيانات إلى جوجل شيت
                 conn.append_records(df_to_add) 
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
                 st.success("تم الحفظ بنجاح في الجدول!")
             except Exception as e:
                 st.error(f"حدث خطأ فني: {e}")
-
-                
