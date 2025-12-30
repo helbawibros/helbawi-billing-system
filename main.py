@@ -132,12 +132,14 @@ else:
                     "الإجمالي": item["الإجمالي"]
                 })
             
-            try:
+                    try:
                 df_to_add = pd.DataFrame(new_data)
-                # استخدام append بدلاً من create للحفاظ على البيانات القديمة
+                # إرسال البيانات إلى جوجل شيت
                 conn.append_records(df_to_add) 
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
-                st.success("تم الحفظ بنجاح!")
-            except Exception:
-                st.error("خطأ: تأكد من وضع رابط الملف في إعدادات Secrets.")
+                st.success("تم الحفظ بنجاح في الجدول!")
+            except Exception as e:
+                st.error(f"حدث خطأ فني: {e}")
+
+                
