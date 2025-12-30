@@ -1,48 +1,76 @@
 import streamlit as st
-import gspread
 from datetime import datetime
+import pandas as pd
+from streamlit_gsheets import GSheetsConnection
 
-# 1. إعداد الواجهة
+# إعدادات الصفحة
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
-# 2. الربط المباشر عبر الرابط العام
-# سنستخدم الرابط الذي جعلته "Anyone with the link can edit"
-sheet_url = "https://docs.google.com/spreadsheets/d/1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0/edit#gid=0"
+# الاتصال بقاعدة البيانات (جداول بيانات جوجل)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-def save_to_google_sheets(rows):
-    try:
-        # الاتصال المباشر (سيطلب الصلاحية من المتصفح أول مرة أو يعمل مباشرة)
-        gc = gspread.public__with_link(sheet_url) # محاولة الوصول العام
-        # ملاحظة: إذا لم يعمل الوصول العام، سنستخدم الطريقة التقليدية
-        st.error("جوجل يطلب توثيق رسمي للحفظ. يرجى اتباع الخطوة أدناه.")
-    except Exception as e:
-        return str(e)
-
-# --- نظام تسجيل الدخول ---
+# نظام تسجيل الدخول
 users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'bill_counters' not in st.session_state:
+    st.session_state.bill_counters = {user: 1 for user in users}
 
 if not st.session_state.logged_in:
     st.title("🔐 دخول المندوبين")
-    u = st.selectbox("الاسم", list(users.keys()))
-    p = st.text_input("كلمة السر", type="password")
+    user_choice = st.selectbox("اختر الاسم", list(users.keys()))
+    password = st.text_input("كلمة السر", type="password")
     if st.button("دخول"):
-        if users[u] == p:
+        if users.get(user_choice) == password:
             st.session_state.logged_in = True
-            st.session_state.user = u
+            st.session_state.user = user_choice
             st.rerun()
+        else: st.error("خطأ!")
 else:
     st.title(f"📄 فاتورة: {st.session_state.user}")
-    cust_id = st.text_input("رقم الحساب")
-    cust_name = st.text_input("اسم الزبون")
     
-    # (هنا نضع قائمة الأصناف كما في الكود السابق...)
-    # لضمان السرعة، سأركز على زر الحفظ:
+    # مدخلات الزبون
+    customer_id = st.text_input("رقم الحساب (ID)")
+    customer_name = st.text_input("اسم الزبون")
     
-    if st.button("💾 حفظ وإرسال (الآن!)"):
-        st.info("جاري محاولة تجاوز قيود جوجل للحفظ...")
-        # هنا سنستخدم رابط فورم (Form) بدلاً من الشيت مباشرة إذا فشل الشيت
-        # لأن الفورم لا يطلب باسورد أبداً!
-        st.markdown(f"### [اضغط هنا لتأكيد إرسال الطلبية مباشرة](https://docs.google.com/forms/d/e/1FAIpQLScyVp_L...)")
-        st.balloons() 
+    # الأصناف والأسعار
+    products = {
+        "حمص رقم 12 907غ": 2.25, "حمص رقم 9 907غ": 2.00, "حمص كسر 1000غ": 1.60,
+        "فول حب 1000غ": 1.30, "فول مجروش 1000غ": 1.75, "فول عريض 1000غ": 2.30
+    }
 
+    selected_items = []
+    for p, price in products.items():
+        qty = st.number_input(f"{p} (${price})", min_value=0, step=1, key=p)
+        if qty > 0:
+            selected_items.append({
+                "التاريخ": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "المندوب": st.session_state.user,
+                "رقم الفاتورة": st.session_state.bill_counters[st.session_state.user],
+                "اسم الزبون": customer_name,
+                "الصنف": p,
+                "العدد": qty,
+                "السعر": price,
+                "الإجمالي": qty * price
+            })
+
+    if st.button("💾 حفظ الفاتورة"):
+        if customer_name and selected_items:
+            try:
+                # قراءة البيانات الحالية
+                existing_data = conn.read()
+                new_data = pd.DataFrame(selected_items)
+                
+                # دمج البيانات
+                updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+                
+                # التحديث (هنا السر: سيحاول الحفظ عبر الرابط العام)
+                conn.update(data=updated_df)
+                
+                st.session_state.bill_counters[st.session_state.user] += 1
+                st.balloons()
+                st.success("✅ تم الحفظ بنجاح!")
+            except Exception as e:
+                st.error(f"خطأ في الحفظ: {e}")
+        else:
+            st.warning("الرجاء إدخال اسم الزبون والأصناف")
