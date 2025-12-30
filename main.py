@@ -6,6 +6,7 @@ from streamlit_gsheets import GSheetsConnection
 # 1. إعدادات واجهة البرنامج
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
+# تصميم الواجهة وتنسيق الجداول لتبدو احترافية
 st.markdown("""
     <style>
     .reportview-container .main .block-container { direction: rtl; }
@@ -20,10 +21,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. اتصال قاعدة البيانات (باستخدام الرابط العام من Secrets)
+# 2. إنشاء الاتصال (يعتمد على الرابط الموجود في Secrets)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 3. نظام تسجيل الدخول
+# 3. نظام تسجيل الدخول البسيط
 users = {"حسين": "1111", "علي": "2222", "مدير": "9999"}
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
@@ -39,9 +40,10 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.user = user_choice
             st.rerun()
-        else: st.error("خطأ!")
+        else:
+            st.error("خطأ في كلمة السر!")
 else:
-    st.title(f"📄 فاتورة: {st.session_state.user}")
+    st.title(f"📄 فاتورة المندوب: {st.session_state.user}")
     
     col_cust1, col_cust2 = st.columns(2)
     with col_cust1:
@@ -51,6 +53,7 @@ else:
     
     rate = st.number_input("سعر صرف الضريبة (L.L)", value=89500)
 
+    # قائمة الأصناف والأسعار
     products = {
         "حمص رقم 12 907غ": 2.25, "حمص رقم 9 907غ": 2.00, "حمص كسر 1000غ": 1.60,
         "فول حب 1000غ": 1.30, "فول مجروش 1000غ": 1.75, "فول عريض 1000غ": 2.30,
@@ -88,6 +91,7 @@ else:
     with col_btn2:
         save_bill = st.button("💾 حفظ وإرسال للشركة")
 
+    # عرض المعاينة
     if show_view:
         if customer_name and selected_items:
             st.markdown("---")
@@ -99,7 +103,7 @@ else:
                 </div>
             """, unsafe_allow_html=True)
             
-            st.table(selected_items)
+            st.table(pd.DataFrame(selected_items))
             
             st.markdown(f"""
                 <div class="right-text total-box">
@@ -111,6 +115,7 @@ else:
                 </div>
             """, unsafe_allow_html=True)
 
+    # نظام الحفظ المطور الذي رأيته في "الرينج"
     if save_bill:
         if not customer_name or not selected_items:
             st.warning("يرجى ملء البيانات أولاً")
@@ -120,30 +125,37 @@ else:
                 new_rows.append({
                     "التاريخ": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "المندوب": st.session_state.user,
-                    "رقم الفاتورة": st.session_state.bill_counters[st.session_state.user],
-                    "رقم الزبون": customer_id,
+                    "رقم الفاتورة": int(st.session_state.bill_counters[st.session_state.user]),
+                    "رقم الزبون": str(customer_id),
                     "اسم الزبون": customer_name,
                     "الصنف": item["الصنف"],
-                    "العدد": item["العدد"],
-                    "السعر": item["السعر"],
-                    "الإجمالي": item["الإجمالي"]
+                    "العدد": int(item["العدد"]),
+                    "السعر": float(item["السعر"]),
+                    "الإجمالي": float(item["الإجمالي"])
                 })
             
             try:
-                # 1. قراءة البيانات الحالية من الجدول
-                existing_df = conn.read()
+                # 1. محاولة قراءة البيانات الحالية (الجزء الذي يظهر فيه الـ Running)
+                try:
+                    existing_df = conn.read()
+                except:
+                    existing_df = pd.DataFrame() 
                 
                 # 2. تجهيز البيانات الجديدة
                 new_data_df = pd.DataFrame(new_rows)
                 
-                # 3. دمج القديم والجديد
-                updated_df = pd.concat([existing_df, new_data_df], ignore_index=True)
+                # 3. دمج البيانات بشكل آمن لمنع تعليق البرنامج
+                if existing_df is not None and not existing_df.empty:
+                    updated_df = pd.concat([existing_df, new_data_df], ignore_index=True)
+                else:
+                    updated_df = new_data_df
                 
-                # 4. تحديث الجدول بالكامل (يعمل مع صلاحية Anyone with link can edit)
+                # 4. التحديث النهائي للرابط العام
                 conn.update(data=updated_df)
                 
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
-                st.success("✅ تم الحفظ بنجاح في الإكسل!")
+                st.success("✅ تم الحفظ بنجاح! طارت البالونات!")
+                
             except Exception as e:
-                st.error(f"❌ خطأ في الحفظ: {e}")
+                st.error(f"فشل في الحفظ النهائي: {e}")
