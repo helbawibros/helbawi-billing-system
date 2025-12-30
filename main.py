@@ -128,18 +128,23 @@ else:
                     "السعر": item["السعر"],
                     "الإجمالي": item["الإجمالي"]
                 })
-            
             try:
-                # قراءة البيانات القديمة أولاً
+                # 1. قراءة البيانات الموجودة حالياً في الجدول
                 existing_df = conn.read()
-                # إضافة البيانات الجديدة إليها
+                
+                # 2. تحويل الفاتورة الجديدة لجدول بيانات
                 new_data_df = pd.DataFrame(new_rows)
+                
+                # 3. دمج القديم مع الجديد
                 updated_df = pd.concat([existing_df, new_data_df], ignore_index=True)
-                # تحديث الجدول بالبيانات كاملة
+                
+                # 4. تحديث الملف بالبيانات الكاملة
                 conn.update(data=updated_df)
                 
+                # 5. النجاح والبالونات
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
                 st.success("تم الحفظ بنجاح في الجدول!")
             except Exception as e:
                 st.error(f"خطأ في الحفظ: {e}")
+
