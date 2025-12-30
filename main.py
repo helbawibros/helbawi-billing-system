@@ -1,24 +1,23 @@
 import streamlit as st
 import requests
 
-# هذا هو الرابط السحري الذي استخرجته أنت من صورك
-URL_LINK = "https://script.google.com/macros/s/AKfycyb8jgJRAQwW2oc4pOE4Med1pwb3NQ79m2p5f1q3-Wg9RfK4l6YkODMgWe6KGeRAY3HmA/exec"
+# الرابط الجديد الذي أرسلته (Web App URL)
+URL_LINK = "https://script.google.com/macros/s/AKfycbyaxdN2TPOOXsNSx8yy4eKBhLPccNe41wKR9MMw9QCM2HbEmJ-Oc6pqGfN5REY0OEratQ/exec"
 
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="centered")
 
-# تصميم بسيط وواضح
 st.title("🚀 نظام تسجيل الطلبيات - حلباوي")
 st.markdown("---")
 
-# نموذج إدخال البيانات داخل إطار (Form) لضمان الترتيب
+# نموذج إدخال البيانات
 with st.form("order_form", clear_on_submit=True):
-    st.subheader("إدخال بيانات الزبون")
+    st.subheader("إدخال بيانات الطلبية")
+    
     mandoub = st.selectbox("اسم المندوب", ["حسين", "علي", "مدير"])
     customer = st.text_input("اسم الزبون (أو رقم الحساب)")
     
     st.divider()
     
-    st.subheader("تفاصيل الطلبية")
     product = st.selectbox("الصنف", [
         "حمص رقم 12 907غ", 
         "حمص رقم 9 907غ", 
@@ -29,13 +28,13 @@ with st.form("order_form", clear_on_submit=True):
     ])
     quantity = st.number_input("العدد (كمية)", min_value=1, step=1)
     
-    # زر الحفظ
+    # زر الحفظ والإرسال
     submit_button = st.form_submit_button("💾 حفظ وإرسال للشركة")
 
 # معالجة الضغط على الزر
 if submit_button:
     if customer:
-        # تجهيز البيانات للإرسال إلى جوجل شيت
+        # تجهيز البيانات للإرسال بتنسيق JSON
         payload = {
             "user": mandoub,
             "customer": customer,
@@ -44,19 +43,20 @@ if submit_button:
         }
         
         try:
-            # إرسال البيانات للرابط الذي أنشأته
-            with st.spinner("جاري الحفظ..."):
-                response = requests.post(URL_LINK, json=payload)
+            with st.spinner("جاري الحفظ في ملف الإكسل..."):
+                # إرسال البيانات للرابط الجديد
+                response = requests.post(URL_LINK, json=payload, timeout=10)
             
+            # التحقق من نجاح العملية (حالة 200 تعني موافقة جوجل)
             if response.status_code == 200:
-                st.balloons() # طيران البالونات احتفالاً بالنجاح!
-                st.success(f"✅ مبروك! تم تسجيل طلبية ({customer}) في ملف الإكسل بنجاح.")
+                st.balloons() # احتفال بنجاح العملية! 🎈
+                st.success(f"✅ ممتاز! تم تسجيل طلبية ({customer}) بنجاح في ملف الإكسل.")
             else:
-                st.error("فشل في الاتصال، تأكد من أنك قمت بعمل Deploy بشكل صحيح.")
+                st.error(f"حدث خطأ في الصلاحيات (كود: {response.status_code}). تأكد من إعداد Anyone في جوجل.")
         except Exception as e:
-            st.error(f"حدث خطأ غير متوقع: {e}")
+            st.error(f"فشل الاتصال: {e}")
     else:
-        st.warning("⚠️ يرجى كتابة اسم الزبون قبل الحفظ.")
+        st.warning("⚠️ يرجى كتابة اسم الزبون أولاً.")
 
 st.markdown("---")
-st.caption("نظام حلباوي الخاص - يعمل مباشرة مع Google Sheets")
+st.caption("نظام حلباوي المستقل - الربط المباشر عبر Apps Script")
