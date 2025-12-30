@@ -6,7 +6,7 @@ from streamlit_gsheets import GSheetsConnection
 # إعدادات الصفحة
 st.set_page_config(page_title="نظام حلباوي للمندوبين", layout="wide")
 
-# الاتصال بقاعدة البيانات (جداول بيانات جوجل)
+# الاتصال بقاعدة البيانات
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # نظام تسجيل الدخول
@@ -47,6 +47,7 @@ else:
                 "التاريخ": datetime.now().strftime("%Y-%m-%d %H:%M"),
                 "المندوب": st.session_state.user,
                 "رقم الفاتورة": st.session_state.bill_counters[st.session_state.user],
+                "رقم الحساب": customer_id,
                 "اسم الزبون": customer_name,
                 "الصنف": p,
                 "العدد": qty,
@@ -57,14 +58,16 @@ else:
     if st.button("💾 حفظ الفاتورة"):
         if customer_name and selected_items:
             try:
-                # قراءة البيانات الحالية
-                existing_data = conn.read()
-                new_data = pd.DataFrame(selected_items)
+                # محاولة قراءة البيانات أو إنشاء جدول جديد
+                try:
+                    existing_data = conn.read()
+                except:
+                    existing_data = pd.DataFrame()
                 
-                # دمج البيانات
+                new_data = pd.DataFrame(selected_items)
                 updated_df = pd.concat([existing_data, new_data], ignore_index=True)
                 
-                # التحديث (هنا السر: سيحاول الحفظ عبر الرابط العام)
+                # تحديث الملف
                 conn.update(data=updated_df)
                 
                 st.session_state.bill_counters[st.session_state.user] += 1
@@ -72,5 +75,6 @@ else:
                 st.success("✅ تم الحفظ بنجاح!")
             except Exception as e:
                 st.error(f"خطأ في الحفظ: {e}")
+                st.info("ملاحظة: إذا ظهر خطأ 'Public Spreadsheet', سنحتاج لإضافة مفتاح خاص بك.")
         else:
             st.warning("الرجاء إدخال اسم الزبون والأصناف")
