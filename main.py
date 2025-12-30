@@ -20,7 +20,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. اتصال قاعدة البيانات
+# 2. اتصال قاعدة البيانات (باستخدام الرابط العام من Secrets)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. نظام تسجيل الدخول
@@ -70,8 +70,8 @@ else:
             total_usd += sub
             total_vat_usd += item_vat
             selected_items.append({
-                "الصنف": p, "العدد": qty, "السعر": f"{price:.2f}",
-                "VAT": f"{item_vat:.2f}", "الإجمالي": f"{(sub + item_vat):.2f}"
+                "الصنف": p, "العدد": qty, "السعر": price,
+                "VAT": item_vat, "الإجمالي": (sub + item_vat)
             })
 
     st.divider()
@@ -130,22 +130,20 @@ else:
                 })
             
             try:
-                # 1. قراءة البيانات الموجودة حالياً في الجدول
+                # 1. قراءة البيانات الحالية من الجدول
                 existing_df = conn.read()
                 
-                # 2. تحويل الفاتورة الجديدة لجدول بيانات
+                # 2. تجهيز البيانات الجديدة
                 new_data_df = pd.DataFrame(new_rows)
                 
-                # 3. دمج القديم مع الجديد
+                # 3. دمج القديم والجديد
                 updated_df = pd.concat([existing_df, new_data_df], ignore_index=True)
                 
-                # 4. تحديث الملف بالبيانات الكاملة
+                # 4. تحديث الجدول بالكامل (يعمل مع صلاحية Anyone with link can edit)
                 conn.update(data=updated_df)
                 
-                # 5. النجاح والبالونات
                 st.session_state.bill_counters[st.session_state.user] += 1
                 st.balloons()
-                st.success("تم الحفظ بنجاح في الجدول!")
+                st.success("✅ تم الحفظ بنجاح في الإكسل!")
             except Exception as e:
-                st.error(f"خطأ في الحفظ: {e}")
-
+                st.error(f"❌ خطأ في الحفظ: {e}")
