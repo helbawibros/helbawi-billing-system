@@ -143,4 +143,3 @@ else:
                 st.success("تم الحفظ بنجاح في الجدول!")
             except Exception as e:
                 st.error(f"خطأ في الحفظ: {e}")
-
