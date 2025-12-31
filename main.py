@@ -4,7 +4,7 @@ import random
 from datetime import datetime
 import requests
 
-# --- 1. إعدادات الصفحة والتنسيق الاحترافي ---
+# --- 1. إعدادات الصفحة والتنسيق ---
 st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
 
 st.markdown("""
@@ -12,12 +12,12 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] { display: none !important; }
+    
     .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
     
     @media print {
         .no-print { display: none !important; }
         .stButton, .stTextInput, .stSelectbox { display: none !important; }
-        body { background-color: white !important; }
     }
 
     .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 18px; text-align: center; }
@@ -45,20 +45,18 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
 USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 PRODUCTS = {
     "حمص١٢ ٩٠٧غ": 2.20, "حمص٩ ٩٠٧ غ": 2.00, "عدس مجروش ٩٠٧غ": 1.75, "عدس عريض٩٠٧غ": 1.90,
-    "عدس احمر ٩٠٧غ": 1.75, "ازر مصري ٩٠٧غ": 1.15, "ارز ايطالي ٩٠٧ غ": 2.25, "ارز عنبري ١٠٠٠غ": 1.90,
+    "عدس احمر ٩٠٧غ": 1.75, "ارز مصري ٩٠٧غ": 1.15, "ارز ايطالي ٩٠٧ غ": 2.25, "ارز عنبري ١٠٠٠غ": 1.90,
     "*سبع بهارات ٥٠غ*١٢": 10.00, "*بهار كبسه٥٠غ*١٢": 10.00, "*بهار سمك٥٠غ*١٢": 8.00
 }
 
+# إدارة حالة التطبيق
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(10000, 99999))
 if 'confirmed' not in st.session_state: st.session_state.confirmed = False
 
-# مفاتيح التحكم بمسح الخانات
-if 'search_val' not in st.session_state: st.session_state.search_val = ""
-if 'qty_val' not in st.session_state: st.session_state.qty_val = ""
-
+# وظيفة مسح الأرقام العربية
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
@@ -90,11 +88,12 @@ elif st.session_state.page == 'order':
     with col_c2: disc_input = st.text_input("الحسم %", value="0")
 
     st.divider()
-    # استخدام session_state لمسح الخانات تلقائياً
-    search = st.text_input("🔍 ابحث عن صنف...", value=st.session_state.search_val, key="s_input")
+    
+    # حقل البحث والعدد مع مفاتيح (keys) للتحكم بالمسح
+    search = st.text_input("🔍 ابحث عن صنف...", key="search_box")
     filtered = [p for p in PRODUCTS.keys() if search in p] if search else list(PRODUCTS.keys())
-    sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered)
-    qty_str = st.text_input("العدد", value=st.session_state.qty_val, key="q_input")
+    sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered, key="product_select")
+    qty_str = st.text_input("العدد", key="qty_box")
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
@@ -103,9 +102,9 @@ elif st.session_state.page == 'order':
                 q = float(convert_ar_nav(qty_str))
                 st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
                 st.session_state.confirmed = False
-                # مسح الخانات
-                st.session_state.search_val = ""
-                st.session_state.qty_val = ""
+                # مسح الخانات برمجياً عبر تغيير الـ Key
+                st.session_state.search_box = ""
+                st.session_state.qty_box = ""
                 st.rerun()
     with col_btn2:
         if st.button("✅ تثبيت الفاتورة", use_container_width=True, type="primary"):
@@ -114,18 +113,14 @@ elif st.session_state.page == 'order':
     if st.session_state.confirmed and st.session_state.temp_items:
         st.markdown("<hr class='no-print'>", unsafe_allow_html=True)
         
-        # --- رأس الفاتورة المعدل (التصميم المطلوب) ---
+        # --- رأس الفاتورة المعدل (التاريخ والمندوب على اليمين) ---
         now_date = datetime.now().strftime("%Y-%m-%d")
         st.markdown(f"""
-            <div style="text-align: center; margin-bottom: -10px;"><h2 style="color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2></div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                <div style="text-align: right;">
-                    <div style="font-size: 26px; font-weight: bold; color: #1E3A8A;">الزبون: {cust}</div>
-                    <div style="font-size: 18px; margin-top: 5px;">التاريخ: {now_date}</div>
-                </div>
-                <div style="text-align: left;">
-                    <div style="font-size: 16px; color: #555;">المندوب: {st.session_state.user_name}</div>
-                </div>
+            <div style="text-align: center; margin-bottom: 10px;"><h2 style="color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2></div>
+            <div style="text-align: right; margin-bottom: 20px;">
+                <div style="font-size: 28px; font-weight: bold; color: #1E3A8A;">الزبون: {cust}</div>
+                <div style="font-size: 18px; margin-top: 5px; color: #333;">التاريخ: {now_date}</div>
+                <div style="font-size: 18px; margin-top: 5px; color: #555;">المندوب: {st.session_state.user_name}</div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -134,7 +129,7 @@ elif st.session_state.page == 'order':
         discount_amt = raw_total * (h_val / 100)
         total_after_disc = raw_total - discount_amt
         
-        # جدول الفاتورة مع تقديم VAT قبل الإجمالي
+        # جدول الفاتورة
         total_vat = 0
         table_html = '<table class="styled-table"><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>VAT</th><th>الإجمالي</th></tr>'
         for item in st.session_state.temp_items:
@@ -169,6 +164,6 @@ elif st.session_state.page == 'order':
             if st.button("🖨️ طباعة الفاتورة", use_container_width=True):
                 st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
-    if st.button("🔙 عودة", key="back"):
+    if st.button("🔙 عودة للرئيسية"):
         st.session_state.page = 'home'
         st.rerun()
