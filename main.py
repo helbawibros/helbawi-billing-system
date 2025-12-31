@@ -81,3 +81,4 @@ elif st.session_state.page == 'order_page':
         st.table(pd.DataFrame(st.session_state.temp_items))
 
     st.button("🔙 عودة", on_click=lambda: setattr(st.session_state, 'page', 'home'))
+
