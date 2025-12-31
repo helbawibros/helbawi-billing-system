@@ -4,7 +4,7 @@ import random
 from datetime import datetime
 import requests
 
-# --- 1. إعدادات الصفحة والتنسيق (نفس الشكل الذي تفضله) ---
+# --- 1. إعدادات الصفحة والتنسيق (الشكل الذي تفضله) ---
 st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
 
 st.markdown("""
@@ -24,12 +24,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. دالة الإرسال المعدلة (لضمان وصول البيانات للـ Sheets) ---
+# --- 2. دالة الإرسال باستخدام الرابط الجديد ---
 def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time):
-    # الرابط الخاص بك
-    url = "https://script.google.com/macros/s/AKfycbyaxdN2TPOOXsNSx8yy4eKBhLPccNe41wKR9MMw9QCM2HbEmJ-Oc6pqGfN5REY0OEratQ/exec"
+    # الرابط الجديد الذي أرسلته
+    url = "https://script.google.com/macros/s/AKfycbzi3kmbVyg_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
     
-    # هذه الأسماء يجب أن تتطابق مع ما تم برمجته في Script جوجل
+    # تجهيز البيانات لتطابق مستقبل جوجل سكريبت
     data = {
         "vat_value": vat,           # العمود A
         "total_before": total_pre,  # العمود B
@@ -40,20 +40,25 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
     }
     
     try:
-        # نستخدم timeout لضمان عدم تعليق البرنامج
         response = requests.post(url, data=data, timeout=10)
         return True
     except:
         return False
 
-# --- 3. البيانات الأساسية وإدارة الدخول ---
-USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
+# --- 3. قاعدة بيانات المندوبين والأصناف ---
+USERS = {
+    "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", 
+    "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", 
+    "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"
+}
+
 PRODUCTS = {
     "حمص١٢ ٩٠٧غ": 2.20, "حمص٩ ٩٠٧ غ": 2.00, "عدس مجروش ٩٠٧غ": 1.75, "عدس عريض٩٠٧غ": 1.90,
     "عدس احمر ٩٠٧غ": 1.75, "ازر مصري ٩٠٧غ": 1.15, "ارز ايطالي ٩٠٧ غ": 2.25, "ارز عنبري ١٠٠٠غ": 1.90,
     "*سبع بهارات ٥٠غ*١٢": 10.00, "*بهار كبسه٥٠غ*١٢": 10.00, "*بهار سمك٥٠غ*١٢": 8.00
 }
 
+# إدارة حالة التطبيق (Session State)
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
@@ -65,6 +70,8 @@ def convert_ar_nav(text):
     return "".join(n_map.get(c, c) for c in text)
 
 # --- 4. واجهة البرنامج ---
+
+# أ- صفحة الدخول
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -73,7 +80,10 @@ if not st.session_state.logged_in:
         if USERS.get(user_sel) == pwd:
             st.session_state.logged_in, st.session_state.user_name, st.session_state.page = True, user_sel, 'home'
             st.rerun()
+        else:
+            st.error("❌ كلمة السر خاطئة")
 
+# ب- الصفحة الرئيسية
 elif st.session_state.page == 'home':
     st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:20px;">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الفاتورة</p></div>', unsafe_allow_html=True)
@@ -82,28 +92,36 @@ elif st.session_state.page == 'home':
         st.session_state.inv_no = str(random.randint(10000, 99999))
         st.rerun()
 
+# ج- صفحة الطلبية والفاتورة
 elif st.session_state.page == 'order':
     st.markdown(f'<h3 class="no-print" style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h3>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1: cust = st.text_input("اسم الزبون")
-    with col2: disc_input = st.text_input("الحسم %", value="0")
     
+    col_c1, col_c2 = st.columns(2)
+    with col_c1: cust = st.text_input("اسم الزبون")
+    with col_c2: disc_input = st.text_input("الحسم %", value="0")
+
     st.divider()
     search = st.text_input("🔍 ابحث عن صنف...")
     filtered = [p for p in PRODUCTS.keys() if search in p] if search else list(PRODUCTS.keys())
     sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered)
     qty_str = st.text_input("العدد")
 
-    if st.button("➕ إضافة صنف", use_container_width=True):
-        if sel_p != "-- اختر الصنف --" and qty_str:
-            q = float(convert_ar_nav(qty_str))
-            st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
-            st.rerun()
-
-    if st.button("✅ ثبت الفاتورة", use_container_width=True, type="primary"):
-        st.session_state.confirmed = True
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("➕ إضافة صنف", use_container_width=True):
+            if sel_p != "-- اختر الصنف --" and qty_str:
+                q = float(convert_ar_nav(qty_str))
+                st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
+                st.session_state.confirmed = False
+                st.rerun()
+    with col_btn2:
+        if st.button("✅ تثبيت الفاتورة", use_container_width=True, type="primary"):
+            st.session_state.confirmed = True
 
     if st.session_state.confirmed and st.session_state.temp_items:
+        st.markdown("<hr class='no-print'>", unsafe_allow_html=True)
+        
+        # الحسابات
         h_val = float(convert_ar_nav(disc_input)) if disc_input else 0
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         discount_amt = raw_total * (h_val / 100)
@@ -113,7 +131,8 @@ elif st.session_state.page == 'order':
         table_html = '<table class="styled-table"><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr>'
         for item in st.session_state.temp_items:
             line_total = item["العدد"] * item["السعر"]
-            if "*" in item["الصنف"]: total_vat += (line_total * (1 - h_val/100)) * 0.11
+            if "*" in item["الصنف"]:
+                total_vat += (line_total * (1 - h_val/100)) * 0.11
             table_html += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_total:.2f}</td></tr>'
         table_html += '</table>'
         st.markdown(table_html, unsafe_allow_html=True)
@@ -123,25 +142,22 @@ elif st.session_state.page == 'order':
                 <div class="summary-row"><span>المجموع قبل الحسم:</span><span>${raw_total:,.2f}</span></div>
                 <div class="summary-row"><span>ضريبة VAT:</span><span>+${total_vat:,.2f}</span></div>
                 <div class="final-total">الصافي النهائي: ${(total_after_disc + total_vat):,.2f}</div>
+                <div class="lbp-box">ضريبة VAT بالليرة (89,500): {int(total_vat * 89500):,} ل.ل.</div>
             </div>
         """, unsafe_allow_html=True)
         
-        if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
-            now = datetime.now().strftime("%Y-%m-%d %H:%M")
-            # إرسال البيانات
-            success = send_to_google_sheets(
-                f"{total_vat:.2f}", 
-                f"{raw_total:.2f}", 
-                st.session_state.inv_no, 
-                cust, 
-                st.session_state.user_name, 
-                now
-            )
-            if success:
-                st.success("✅ تم الإرسال بنجاح! تأكد من ملف Sheets الآن.")
-            else:
-                st.error("❌ فشل الإرسال. تأكد من اتصال الإنترنت أو إعدادات الرابط.")
+        col_s, col_p = st.columns(2)
+        with col_s:
+            if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
+                now = datetime.now().strftime("%Y-%m-%d %H:%M")
+                if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, now):
+                    st.success("✅ تم الإرسال بنجاح!")
+                else:
+                    st.error("❌ حدث خطأ في الإرسال")
+        with col_p:
+            if st.button("🖨️ طباعة الفاتورة", use_container_width=True):
+                st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
-    if st.button("🔙 عودة", key="back"):
+    if st.button("🔙 العودة للرئيسية", key="back"):
         st.session_state.page = 'home'
         st.rerun()
