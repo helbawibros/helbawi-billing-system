@@ -9,14 +9,14 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
-    .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; }
-    .total-box { background-color: #d4edda; color: #155724; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 20px; margin-top: 10px; }
-    th { background-color: #f0f2f6 !important; color: black !important; text-align: center !important; }
-    td { text-align: center !important; border-bottom: 1px solid #ddd !important; }
+    .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
+    .total-box { background-color: #d4edda; color: #155724; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 20px; margin-top: 10px; border: 1px solid #c3e6cb; }
+    th { background-color: #1E3A8A !important; color: white !important; text-align: center !important; }
+    td { text-align: center !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. قاعدة البيانات والأصناف المحددة ---
+# --- 2. قاعدة البيانات والأصناف ---
 USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 
 PRODUCTS = {
@@ -33,11 +33,12 @@ PRODUCTS = {
     "*بهار سمك٥٠غ*١٢": 8.00
 }
 
+# إدارة حالة التطبيق (بقاء البيانات)
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(1000, 9999))
-if 'show_table' not in st.session_state: st.session_state.show_table = False
+if 'confirmed' not in st.session_state: st.session_state.confirmed = False
 
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
@@ -57,17 +58,20 @@ if not st.session_state.logged_in:
             st.session_state.page = 'home'
             st.rerun()
 
-# الصفحة الرئيسية
+# الصفحة الرئيسية (بركة الصلاة)
 elif st.session_state.page == 'home':
     st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green;">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الفاتورة</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-size:18px; font-weight:bold;">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الفاتورة</p></div>', unsafe_allow_html=True)
     if st.button("📝 تسجيل فاتورة جديدة", use_container_width=True, type="primary"):
         st.session_state.page = 'order'
+        st.session_state.temp_items = []
+        st.session_state.confirmed = False
         st.rerun()
 
 # صفحة الفاتورة
 elif st.session_state.page == 'order':
     st.markdown(f'<h3 style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h3>', unsafe_allow_html=True)
+    
     cust = st.text_input("الزبون", placeholder="اسم المحل")
     
     st.divider()
@@ -78,42 +82,50 @@ elif st.session_state.page == 'order':
     qty = st.text_input("العدد", value="1")
 
     col_add, col_fix = st.columns(2)
+    
     with col_add:
         if st.button("➕ إضافة للصنف", use_container_width=True):
-            if sel_p != "-- اختر --":
+            if sel_p != "-- اختر --" and cust != "":
                 q = float(convert_ar_nav(qty))
                 price = PRODUCTS[sel_p]
-                # حساب الضريبة 11% للأصناف المحددة بنجمة
+                # الضريبة 11% للأصناف التي تحتوي على نجمة
                 vat = (price * q * 0.11) if "*" in sel_p else 0.0
                 total = (price * q) + vat
                 
                 st.session_state.temp_items.append({
                     "الصنف": sel_p,
-                    "العدد": q,
+                    "العدد": int(q),
                     "السعر": f"{price:.2f}",
                     "VAT": f"{vat:.2f}",
                     "الإجمالي": f"{total:.2f}"
                 })
+                st.session_state.confirmed = False # إعادة التثبيت عند إضافة صنف جديد
                 st.toast(f"تمت إضافة {sel_p}")
 
     with col_fix:
         if st.button("✅ ثبت", use_container_width=True, type="primary"):
-            st.session_state.show_table = True
+            if st.session_state.temp_items:
+                st.session_state.confirmed = True
+            else:
+                st.error("أضف أصنافاً أولاً!")
 
-    # عرض الجدول عند الضغط على ثبت
-    if st.session_state.show_table and st.session_state.temp_items:
-        st.divider()
+    # الجدول يظهر تحت الزيح عند الضغط على "ثبت"
+    if st.session_state.confirmed:
+        st.markdown("---")
         st.markdown(f"**الزبون:** {cust}")
+        
+        # تحويل البيانات لجدول
         df = pd.DataFrame(st.session_state.temp_items)
         st.table(df)
         
+        # حساب الصافي
         total_sum = sum(float(item["الإجمالي"]) for item in st.session_state.temp_items)
         st.markdown(f'<div class="total-box">الصافي النهائي: ${total_sum:.2f}</div>', unsafe_allow_html=True)
         
-        if st.button("💾 حفظ وإرسال", use_container_width=True):
-            st.success("تم الحفظ بنجاح")
+        st.write("")
+        if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
+            st.success("✅ تم حفظ الطلبية وإرسالها!")
 
-    if st.button("🔙 عودة"):
+    if st.button("🔙 عودة للرئيسية"):
         st.session_state.page = 'home'
-        st.session_state.show_table = False
         st.rerun()
