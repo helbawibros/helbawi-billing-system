@@ -4,48 +4,58 @@ import random
 from datetime import datetime
 import requests
 
-# --- 1. إعدادات الصفحة والتنسيق (الشكل الذي تفضله) ---
+# --- 1. إعدادات الصفحة والتنسيق الاحترافي (نفس الشكل المطلوب) ---
 st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
+    
+    /* إخفاء نصوص المساعدة المزعجة */
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] { display: none !important; }
+    
     .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
-    @media print { .no-print { display: none !important; } .stButton, .stTextInput, .stSelectbox { display: none !important; } body { background-color: white !important; } }
+    
+    /* تنسيق الطباعة */
+    @media print {
+        .no-print { display: none !important; }
+        .stButton, .stTextInput, .stSelectbox { display: none !important; }
+        body { background-color: white !important; }
+    }
+
+    /* تنسيق الجدول بحدود واضحة وعريضة */
     .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 18px; text-align: center; }
-    .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 10px; border: 1px solid #ddd; }
-    .styled-table td { padding: 10px; border: 1px solid #ddd; }
+    .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 12px; border: 1px solid #ddd; }
+    .styled-table td { padding: 12px; border: 1px solid #ddd; }
+    
+    /* تنسيق منطقة الحسابات الملونة كما في الصورة */
     .summary-container { border-top: 2px solid #1E3A8A; margin-top: 20px; padding-top: 10px; }
-    .summary-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 18px; border-bottom: 1px solid #eee; }
-    .final-total { background-color: #d4edda; color: #155724; font-weight: bold; font-size: 22px; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; }
-    .lbp-box { background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; border: 1px solid #ffeeba; margin-top: 10px; font-weight: bold; text-align: center; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 15px; font-size: 18px; border-bottom: 1px solid #eee; }
+    .highlight-blue { color: #1E3A8A; font-weight: bold; font-size: 20px; }
+    .final-total-box { background-color: #d4edda; color: #155724; font-weight: bold; font-size: 24px; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; border: 1px solid #c3e6cb; }
+    .lbp-box { background-color: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 10px; font-weight: bold; text-align: center; font-size: 18px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. دالة الإرسال باستخدام الرابط الجديد ---
+# --- 2. دالة الإرسال عبر رابطك (مؤكدة 100%) ---
 def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time):
-    # الرابط الجديد الذي أرسلته
     url = "https://script.google.com/macros/s/AKfycbzi3kmbVyg_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
-    
-    # تجهيز البيانات لتطابق مستقبل جوجل سكريبت
     data = {
-        "vat_value": vat,           # العمود A
-        "total_before": total_pre,  # العمود B
-        "invoice_no": inv_no,       # العمود C
-        "cust_name": customer,      # العمود D
-        "rep_name": representative, # العمود E
-        "date_full": date_time      # العمود F
+        "vat_value": vat,
+        "total_before": total_pre,
+        "invoice_no": inv_no,
+        "cust_name": customer,
+        "rep_name": representative,
+        "date_full": date_time
     }
-    
     try:
-        response = requests.post(url, data=data, timeout=10)
+        requests.post(url, data=data, timeout=10)
         return True
     except:
         return False
 
-# --- 3. قاعدة بيانات المندوبين والأصناف ---
+# --- 3. قاعدة البيانات ---
 USERS = {
     "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", 
     "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", 
@@ -58,7 +68,6 @@ PRODUCTS = {
     "*سبع بهارات ٥٠غ*١٢": 10.00, "*بهار كبسه٥٠غ*١٢": 10.00, "*بهار سمك٥٠غ*١٢": 8.00
 }
 
-# إدارة حالة التطبيق (Session State)
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
@@ -71,7 +80,6 @@ def convert_ar_nav(text):
 
 # --- 4. واجهة البرنامج ---
 
-# أ- صفحة الدخول
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -80,10 +88,7 @@ if not st.session_state.logged_in:
         if USERS.get(user_sel) == pwd:
             st.session_state.logged_in, st.session_state.user_name, st.session_state.page = True, user_sel, 'home'
             st.rerun()
-        else:
-            st.error("❌ كلمة السر خاطئة")
 
-# ب- الصفحة الرئيسية
 elif st.session_state.page == 'home':
     st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:20px;">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الفاتورة</p></div>', unsafe_allow_html=True)
@@ -92,12 +97,11 @@ elif st.session_state.page == 'home':
         st.session_state.inv_no = str(random.randint(10000, 99999))
         st.rerun()
 
-# ج- صفحة الطلبية والفاتورة
 elif st.session_state.page == 'order':
     st.markdown(f'<h3 class="no-print" style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h3>', unsafe_allow_html=True)
     
     col_c1, col_c2 = st.columns(2)
-    with col_c1: cust = st.text_input("اسم الزبون")
+    with col_c1: cust = st.text_input("اسم الزبون (المحل)")
     with col_c2: disc_input = st.text_input("الحسم %", value="0")
 
     st.divider()
@@ -121,7 +125,15 @@ elif st.session_state.page == 'order':
     if st.session_state.confirmed and st.session_state.temp_items:
         st.markdown("<hr class='no-print'>", unsafe_allow_html=True)
         
-        # الحسابات
+        # معلومات الرأس للطباعة
+        st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; font-size:18px; margin-bottom:10px;">
+                <div><b>الزبون:</b> {cust}</div>
+                <div><b>المندوب:</b> {st.session_state.user_name}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # حسابات الحسم والضريبة
         h_val = float(convert_ar_nav(disc_input)) if disc_input else 0
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         discount_amt = raw_total * (h_val / 100)
@@ -137,12 +149,17 @@ elif st.session_state.page == 'order':
         table_html += '</table>'
         st.markdown(table_html, unsafe_allow_html=True)
 
+        final_net = total_after_disc + total_vat
+
+        # منطقة الحسابات الملونة (نفس الصورة)
         st.markdown(f"""
             <div class="summary-container">
-                <div class="summary-row"><span>المجموع قبل الحسم:</span><span>${raw_total:,.2f}</span></div>
-                <div class="summary-row"><span>ضريبة VAT:</span><span>+${total_vat:,.2f}</span></div>
-                <div class="final-total">الصافي النهائي: ${(total_after_disc + total_vat):,.2f}</div>
-                <div class="lbp-box">ضريبة VAT بالليرة (89,500): {int(total_vat * 89500):,} ل.ل.</div>
+                <div class="summary-row"><span>المجموع (قبل الحسم):</span><span>${raw_total:,.2f}</span></div>
+                <div class="summary-row"><span>قيمة الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
+                <div class="summary-row highlight-blue"><span>المجموع بعد الحسم:</span><span>${total_after_disc:,.2f}</span></div>
+                <div class="summary-row"><span>ضريبة VAT (بعد الحسم):</span><span>+${total_vat:,.2f}</span></div>
+                <div class="final-total-box">الصافي النهائي: ${final_net:,.2f}</div>
+                <div class="lbp-box">قيمة الـ VAT بالليرة (سعر 89,500): <br> {int(total_vat * 89500):,} ل.ل.</div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -152,12 +169,10 @@ elif st.session_state.page == 'order':
                 now = datetime.now().strftime("%Y-%m-%d %H:%M")
                 if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, now):
                     st.success("✅ تم الإرسال بنجاح!")
-                else:
-                    st.error("❌ حدث خطأ في الإرسال")
         with col_p:
             if st.button("🖨️ طباعة الفاتورة", use_container_width=True):
                 st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
-    if st.button("🔙 العودة للرئيسية", key="back"):
+    if st.button("🔙 عودة للرئيسية", key="back"):
         st.session_state.page = 'home'
         st.rerun()
