@@ -8,34 +8,38 @@ st.set_page_config(page_title="شركة حلباوي إخوان", layout="center
 # 2. قاعدة بيانات المناديب
 USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 
-# دالة تحويل الأرقام العربية
+# دالة تحويل الأرقام
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# 3. التنسيق "الحديدي" لمنع كسر السطور
+# 3. التنسيق القسري (CSS) - الحل الوحيد لمنع كسر السطر
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
     
-    /* إجبار الأعمدة على البقاء بجانب بعضها مهما صغر العرض */
+    /* إجبار الأعمدة على البقاء في سطر واحد */
+    div[data-testid="column"] {
+        width: unset !important;
+        flex: unset !important;
+        min-width: unset !important;
+    }
+    
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
         gap: 5px !important;
     }
-    div[data-testid="column"] {
-        flex: 1 1 auto !important;
-        min-width: 0 !important;
-    }
-    
-    /* تنسيق رقم الفاتورة في الوسط */
-    .invoice-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #fff; }
-    
-    /* تصغير المسافات بين العناصر لتبدو مثل الجدول */
-    .stTextInput, .stSelectbox, .stNumberInput { margin-bottom: -15px !important; }
+
+    /* تحديد نسب العرض بدقة */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(1) { width: 78% !important; }
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) { width: 20% !important; }
+
+    .invoice-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -44,7 +48,7 @@ if 'page' not in st.session_state: st.session_state.page = 'home'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(1000, 9999))
 
-# --- الصفحة الأولى: دخول المندوبين ---
+# --- نظام الدخول والترحيب ---
 if not st.session_state.logged_in:
     st.markdown('<h2 style="text-align:center;">🔐 دخول المندوبين</h2>', unsafe_allow_html=True)
     user = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -53,11 +57,8 @@ if not st.session_state.logged_in:
         if USERS.get(user) == pwd:
             st.session_state.logged_in, st.session_state.user_name = True, user
             st.rerun()
-
-# --- الصفحة الثانية: الترحيب ---
 elif st.session_state.page == 'home':
     st.markdown(f'<h3 style="text-align:center;">أهلاً بك سيد {st.session_state.user_name}</h3>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align:center; color:#2e7d32;">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الطلبيه</p>', unsafe_allow_html=True)
     if st.button("📝 تسجيل الفاتورة", use_container_width=True, type="primary"):
         st.session_state.page = 'order_page'
         st.rerun()
@@ -65,44 +66,36 @@ elif st.session_state.page == 'home':
         st.session_state.logged_in = False
         st.rerun()
 
-# --- الصفحة الثالثة: صفحة الطلبية (التابلو الحقيقي) ---
+# --- صفحة الطلبية (التابلو الحديدي) ---
 elif st.session_state.page == 'order_page':
     st.markdown(f'<div class="invoice-header">رقم الفاتورة: {st.session_state.inv_no}</div>', unsafe_allow_html=True)
 
-    # السطر 1: الزبون (80%) والحسم (20%)
-    c1, c2 = st.columns([4, 1])
-    with c1:
-        cust = st.text_input("", placeholder="اسم الزبون (المحل)", label_visibility="collapsed")
-    with c2:
-        disc = st.text_input("", placeholder="%حسم", label_visibility="collapsed")
+    # السطر 1: الزبون والحسم
+    row1_c1, row1_c2 = st.columns([4, 1])
+    with row1_c1:
+        cust = st.text_input("الزبون", placeholder="اسم المحل", label_visibility="collapsed")
+    with row1_c2:
+        disc = st.text_input("حسم%", value="0", label_visibility="collapsed")
 
     st.write("---")
 
-    # السطر 2: الصنف والكمية
-    all_p = ["حمص رقم 12 907غ", "حمص رقم 9 907غ", "فول عريض 1000غ", "فلفل اسود"]
-    c3, c4 = st.columns([4, 1])
-    with c3:
-        search_val = st.text_input("", placeholder="🔍 ابحث عن صنف...", label_visibility="collapsed")
-        # فلترة الأصناف بناءً على البحث
+    # السطر 2: الصنف والعدد
+    all_p = ["حمص رقم 12 907غ", "حمص رقم 9 907غ", "فول عريض 1000غ"]
+    row2_c1, row2_c2 = st.columns([4, 1])
+    with row2_c1:
+        search_val = st.text_input("بحث", placeholder="🔍 ابحث عن صنف...", label_visibility="collapsed")
         filtered = [p for p in all_p if search_val in p] if search_val else all_p
-        sel_p = st.selectbox("", ["-- اختر الصنف --"] + filtered, label_visibility="collapsed")
-    with c4:
-        qty = st.text_input("", value="1", placeholder="العدد", label_visibility="collapsed")
+        sel_p = st.selectbox("صنف", ["-- اختر الصنف --"] + filtered, label_visibility="collapsed")
+    with row2_c2:
+        qty = st.text_input("عدد", value="1", label_visibility="collapsed")
 
     if st.button("➕ إضافة للصنف", use_container_width=True):
         if sel_p != "-- اختر الصنف --" and cust:
-            st.session_state.temp_items.append({
-                "الصنف": sel_p, 
-                "الكمية": convert_ar_nav(qty),
-                "السعر": 2.5, # تجريبي
-                "الإجمالي": float(convert_ar_nav(qty)) * 2.5
-            })
-            st.success("تمت الإضافة")
+            st.session_state.temp_items.append({"الصنف": sel_p, "الكمية": convert_ar_nav(qty)})
+            st.success("تم")
 
-    # عرض الجدول (التابلو)
     if st.session_state.temp_items:
-        df = pd.DataFrame(st.session_state.temp_items)
-        st.table(df[["الصنف", "الكمية", "الإجمالي"]])
+        st.table(pd.DataFrame(st.session_state.temp_items))
 
     if st.button("🔙 عودة"):
         st.session_state.page = 'home'
