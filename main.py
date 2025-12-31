@@ -2,90 +2,120 @@ import streamlit as st
 import pandas as pd
 import random
 
-# --- إعدادات الصفحة والتنسيق ---
+# --- 1. إعدادات الصفحة والتنسيق ---
 st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
-    .stTable { direction: rtl; }
+    .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px; }
+    .welcome-container { text-align: center; margin: 20px 0; }
+    .welcome-text { font-size: 22px; color: #1E3A8A; font-weight: 800; }
+    .blessing-text { font-size: 18px; color: #2e7d32; font-weight: 600; margin-top: 5px; }
+    .total-box { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 20px; }
     th { background-color: #1E3A8A !important; color: white !important; text-align: center !important; }
     td { text-align: center !important; }
-    .total-box { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- إدارة البيانات (Session State) ---
+# --- 2. قاعدة البيانات وإدارة الحالة ---
+USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
+
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(1000, 9999))
 
-# --- واجهة تسجيل الطلبية ---
-st.markdown(f'<h3 style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h3>', unsafe_allow_html=True)
+def convert_ar_nav(text):
+    n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
+    return "".join(n_map.get(c, c) for c in text)
 
-# 1. معلومات الزبون
-cust_name = st.text_input("الزبون", placeholder="اسم المحل")
-discount_val = st.text_input("حسم %", value="0")
+# --- 3. نظام الصفحات ---
 
-st.divider()
+# أ- صفحة تسجيل الدخول
+if not st.session_state.logged_in:
+    st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
+    user = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
+    pwd = st.text_input("كلمة السر", type="password")
+    if st.button("دخول", use_container_width=True):
+        if USERS.get(user) == pwd:
+            st.session_state.logged_in = True
+            st.session_state.user_name = user
+            st.session_state.page = 'home'
+            st.rerun()
+        else:
+            st.error("❌ كلمة السر خاطئة")
 
-# 2. إدخال الأصناف
-all_products = ["حمص رقم 12 907غ", "حمص رقم 9 907غ", "فول عريض 1000غ", "سبع بهارات 50غ"]
-search_prod = st.text_input("🔍 ابحث عن صنف...")
-filtered_prod = [p for p in all_products if search_prod in p] if search_prod else all_products
-selected_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered_prod)
-qty_input = st.number_input("العدد", min_value=1, value=1)
+# ب- الصفحة الرئيسية (بركة الصلاة)
+elif st.session_state.page == 'home':
+    st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
+    st.markdown(f"""
+        <div class="welcome-container">
+            <div class="welcome-text">أهلاً بك سيد {st.session_state.user_name}</div>
+            <div class="blessing-text">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الفاتورة</div>
+        </div>
+    """, unsafe_allow_html=True)
+    if st.button("📝 تسجيل فاتورة جديدة", use_container_width=True, type="primary"):
+        st.session_state.page = 'order'
+        st.rerun()
+    if st.button("🚪 تسجيل الخروج", use_container_width=True):
+        st.session_state.logged_in = False
+        st.rerun()
 
-# كبسة الإضافة
-if st.button("➕ إضافة للصنف", use_container_width=True, type="secondary"):
-    if selected_p != "-- اختر الصنف --" and cust_name != "":
-        # حسبة تجريبية للسعر
-        price = 2.25 if "حمص" in selected_p else 10.00
-        tax = 1.10 if "بهارات" in selected_p else 0.00
-        total = (price * qty_input) + tax
+# ج- صفحة الطلبية (الجدول والكبسات)
+elif st.session_state.page == 'order':
+    st.markdown(f'<h3 style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h3>', unsafe_allow_html=True)
+    
+    cust_name = st.text_input("الزبون", placeholder="اسم المحل")
+    discount = st.text_input("حسم %", value="0")
+    
+    st.divider()
+    
+    # اختيار الصنف والعدد
+    all_p = ["حمص رقم 12 907غ", "حمص رقم 9 907غ", "فول عريض 1000غ", "سبع بهارات 50غ"]
+    search = st.text_input("🔍 ابحث عن صنف...")
+    filtered = [p for p in all_p if search in p] if search else all_p
+    sel_p = st.selectbox("اختر الصنف", ["-- اختر --"] + filtered)
+    qty = st.text_input("العدد", value="1")
+
+    # كبسات الإضافة والتثبيت بجانب بعضها
+    col_add, col_fix = st.columns(2)
+    with col_add:
+        add_btn = st.button("➕ إضافة للصنف", use_container_width=True)
+    with col_fix:
+        fix_btn = st.button("✅ ثبت", use_container_width=True, type="primary")
+
+    if add_btn:
+        if sel_p != "-- اختر --" and cust_name != "":
+            q = float(convert_ar_nav(qty))
+            price = 2.25 # افتراضي
+            st.session_state.temp_items.append({
+                "الرقم": len(st.session_state.temp_items) + 1,
+                "الصنف": sel_p,
+                "العدد": q,
+                "السعر": price,
+                "الإجمالي": q * price
+            })
+            st.success(f"تمت إضافة {sel_p}")
+
+    if fix_btn:
+        st.info("تم تثبيت البيانات الحالية")
+
+    st.divider()
+
+    # الجدول تحت الكبسات
+    if st.session_state.temp_items:
+        st.markdown(f"**الزبون:** {cust_name}")
+        df = pd.DataFrame(st.session_state.temp_items)
+        st.table(df)
         
-        # إضافة الصنف للقائمة
-        st.session_state.temp_items.append({
-            "الرقم": len(st.session_state.temp_items),
-            "الصنف": selected_p,
-            "العدد": qty_input,
-            "السعر": f"{price:.2f}",
-            "VAT": f"{tax:.2f}",
-            "الإجمالي": f"{total:.2f}"
-        })
-        st.success(f"تمت إضافة {selected_p}")
-    else:
-        st.warning("يرجى إدخال اسم الزبون واختيار الصنف")
+        total_sum = sum(item["الإجمالي"] for item in st.session_state.temp_items)
+        st.markdown(f'<div class="total-box">الصافي النهائي: ${total_sum:.2f}</div>', unsafe_allow_html=True)
 
-st.divider()
-
-# --- 3. الجدول (الذي يظهر تحت الكبسات) ---
-if st.session_state.temp_items:
-    st.markdown(f"### الزبون: {cust_name}")
-    st.write(f"رقم الفاتورة: {st.session_state.inv_no}")
-    
-    # تحويل القائمة لجدول بيانات
-    df = pd.DataFrame(st.session_state.temp_items)
-    
-    # عرض الجدول بتنسيق مشابه للصورة
-    st.table(df[["الرقم", "الصنف", "العدد", "السعر", "VAT", "الإجمالي"]])
-    
-    # حساب الصافي النهائي
-    net_total = sum(float(item["الإجمالي"]) for item in st.session_state.temp_items)
-    st.markdown(f'<div class="total-box">الصافي النهائي: ${net_total:.2f}</div>', unsafe_allow_html=True)
-
-    st.write("") # فراغ
-
-    # أزرار الإجراءات النهائية (كما في صورتك)
-    col_view, col_save = st.columns(2)
-    with col_view:
-        if st.button("👁️ مشاهدة الفاتورة", use_container_width=True):
-            st.info("جاري تجهيز عرض الفاتورة...")
-    with col_save:
         if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
-            st.success("✅ تم حفظ الفاتورة وإرسالها بنجاح!")
+            st.success("تم الإرسال بنجاح")
 
-if st.button("🔙 عودة للرئيسية"):
-    st.session_state.page = 'home'
-    st.rerun()
-
+    if st.button("🔙 عودة"):
+        st.session_state.page = 'home'
+        st.rerun()
