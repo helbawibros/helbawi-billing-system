@@ -19,9 +19,7 @@ st.markdown("""
         .no-print { display: none !important; }
         .stButton, .stTextInput, .stSelectbox { display: none !important; }
         body { background-color: white !important; }
-        .print-only { display: block !important; }
     }
-    .print-only { display: none; }
 
     .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 18px; text-align: center; }
     .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 12px; border: 1px solid #ddd; }
@@ -33,7 +31,6 @@ st.markdown("""
     .final-total-box { background-color: #d4edda; color: #155724; font-weight: bold; font-size: 24px; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; border: 1px solid #c3e6cb; }
     .lbp-box { background-color: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 10px; font-weight: bold; text-align: center; font-size: 18px; }
     
-    /* تنسيق الإيصال */
     .receipt-box { border: 3px double #1E3A8A; padding: 30px; border-radius: 15px; margin-top: 20px; background-color: #f9f9f9; }
     .receipt-title { text-align: center; color: #1E3A8A; font-size: 30px; font-weight: bold; text-decoration: underline; margin-bottom: 25px; }
     .receipt-line { font-size: 22px; margin-bottom: 15px; line-height: 1.8; }
@@ -63,6 +60,7 @@ if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(10000, 99999))
 if 'confirmed' not in st.session_state: st.session_state.confirmed = False
 if 'receipt_view' not in st.session_state: st.session_state.receipt_view = False
+if 'is_sent' not in st.session_state: st.session_state.is_sent = False
 
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
@@ -83,13 +81,12 @@ elif st.session_state.page == 'home':
     st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:20px;">ببركة الصلاة على محمد وال محمد ابدأ تسجيل الفاتورة</p></div>', unsafe_allow_html=True)
     if st.button("📝 تسجيل فاتورة جديدة", use_container_width=True, type="primary"):
-        st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view = 'order', [], False, False
+        st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view, st.session_state.is_sent = 'order', [], False, False, False
         st.session_state.inv_no = str(random.randint(10000, 99999))
         st.rerun()
 
 elif st.session_state.page == 'order':
     
-    # حالة عرض الإيصال
     if st.session_state.receipt_view:
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
@@ -190,13 +187,18 @@ elif st.session_state.page == 'order':
             
             col_s, col_p = st.columns(2)
             with col_s:
-                if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
+                if st.button("💾 حفظ وإرسال", use_container_width=True):
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
                     if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, now_str):
-                        st.success("✅ تم الإرسال بنجاح!")
+                        st.session_state.is_sent = True
+                        st.success("✅ تم الحفظ والإرسال بنجاح!")
+                        st.rerun()
             with col_p:
-                if st.button("🖨️ طباعة الفاتورة", use_container_width=True):
+                # هذا الزر لا يعمل إلا إذا كانت is_sent تساوي True
+                if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
+                if not st.session_state.is_sent:
+                    st.caption("⚠️ يجب الضغط على 'حفظ وإرسال' أولاً لتتمكن من الطباعة.")
 
         st.divider()
         col_back, col_rec = st.columns(2)
