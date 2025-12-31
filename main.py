@@ -21,19 +21,30 @@ st.markdown("""
         body { background-color: white !important; }
     }
 
-    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 18px; text-align: center; }
-    .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 12px; border: 1px solid #ddd; }
-    .styled-table td { padding: 12px; border: 1px solid #ddd; }
+    /* تنسيق جدول الفاتورة */
+    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 16px; text-align: center; }
+    .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 8px; border: 1px solid #ddd; }
+    .styled-table td { padding: 8px; border: 1px solid #ddd; }
     
     .summary-container { border-top: 2px solid #1E3A8A; margin-top: 20px; padding-top: 10px; }
-    .summary-row { display: flex; justify-content: space-between; padding: 8px 15px; font-size: 18px; border-bottom: 1px solid #eee; }
-    .highlight-blue { color: #1E3A8A; font-weight: bold; font-size: 20px; }
-    .final-total-box { background-color: #d4edda; color: #155724; font-weight: bold; font-size: 24px; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; border: 1px solid #c3e6cb; }
-    .lbp-box { background-color: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 10px; font-weight: bold; text-align: center; font-size: 18px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #eee; }
+    .highlight-blue { color: #1E3A8A; font-weight: bold; font-size: 18px; }
+    .final-total-box { background-color: #d4edda; color: #155724; font-weight: bold; font-size: 20px; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; border: 1px solid #c3e6cb; }
     
-    .receipt-box { border: 3px double #1E3A8A; padding: 30px; border-radius: 15px; margin-top: 20px; background-color: #f9f9f9; }
-    .receipt-title { text-align: center; color: #1E3A8A; font-size: 30px; font-weight: bold; text-decoration: underline; margin-bottom: 25px; }
-    .receipt-line { font-size: 22px; margin-bottom: 15px; line-height: 1.8; }
+    /* تنسيق الإيصال الجديد للطابعة الحرارية */
+    .thermal-receipt { 
+        width: 100%; 
+        max-width: 300px; 
+        margin: 0 auto; 
+        padding: 10px; 
+        border: 1px solid #eee; 
+        text-align: center;
+    }
+    .receipt-header { font-size: 22px; font-weight: 800; margin-bottom: 2px; }
+    .receipt-sub { font-size: 14px; margin-bottom: 10px; line-height: 1.2; }
+    .receipt-title { font-size: 20px; font-weight: bold; margin: 15px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0; }
+    .receipt-body { text-align: right; font-size: 17px; line-height: 1.6; margin-bottom: 20px; }
+    .receipt-footer { font-size: 14px; border-top: 1px solid #eee; padding-top: 10px; text-align: right; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -50,7 +61,7 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
 USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 PRODUCTS = {
     "حمص١٢ ٩٠٧غ": 2.20, "حمص٩ ٩٠٧ غ": 2.00, "عدس مجروش ٩٠٧غ": 1.75, "عدس عريض٩٠٧غ": 1.90,
-    "عدس احمر ٩٠٧غ": 1.75, "ازر مصري ٩٠٧غ": 1.15, "ارز ايطالي ٩٠٧ غ": 2.25, "ارز عنبري ١٠٠٠غ": 1.90,
+    "عدس احمر ٩٠٧غ": 1.75, "ارز مصري ٩٠٧غ": 1.15, "ارز ايطالي ٩٠٧ غ": 2.25, "ارز عنبري ١٠٠٠غ": 1.90,
     "*سبع بهارات ٥٠غ*١٢": 10.00, "*بهار كبسه٥٠غ*١٢": 10.00, "*بهار سمك٥٠غ*١٢": 8.00
 }
 
@@ -88,27 +99,33 @@ elif st.session_state.page == 'home':
 elif st.session_state.page == 'order':
     
     if st.session_state.receipt_view:
+        # حساب المجموع الصافي للإيصال
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
+        total_after_disc = raw_total * (1 - h_val/100)
         total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
-        final_net = (raw_total * (1 - h_val/100)) + total_vat
+        final_net = total_after_disc + total_vat
         cust_name = st.session_state.get('last_cust', '..........')
         
         st.markdown(f"""
-            <div class="receipt-box">
-                <div class="receipt-title">إيصال استلام مبلغ</div>
-                <div class="receipt-line">وصلنا من السيد: <b>{cust_name}</b> المحترم.</div>
-                <div class="receipt-line">مبلغاً وقدره: <span style="color:green; font-weight:bold;">${final_net:,.2f}</span></div>
-                <div class="receipt-line">وذلك عن فاتورة رقم: {st.session_state.inv_no}</div>
-                <div style="display: flex; justify-content: space-between; margin-top: 40px;">
-                    <div>تاريخ: {datetime.now().strftime("%Y-%m-%d")}</div>
-                    <div>توقيع المندوب: {st.session_state.user_name}</div>
+            <div class="thermal-receipt">
+                <div class="receipt-header">شركة حلباوي إخوان ش.م.م</div>
+                <div class="receipt-sub">بيروت - الرويس<br>01/556058 - 03/220893</div>
+                <div class="receipt-title">إشعار بالاستلام</div>
+                <div class="receipt-body">
+                    وصلنا من السيد: <b>{cust_name}</b><br>
+                    مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>
+                    وذلك عن فاتورة رقم: #{st.session_state.inv_no}
+                </div>
+                <div class="receipt-footer">
+                    التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>
+                    المندوب: {st.session_state.user_name}
                 </div>
             </div>
             <br>
         """, unsafe_allow_html=True)
         
-        if st.button("🖨️ طباعة الإيصال الآن", use_container_width=True):
+        if st.button("🖨️ طباعة الإيصال", use_container_width=True):
             st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
         if st.button("🔙 العودة للفاتورة", use_container_width=True):
             st.session_state.receipt_view = False
@@ -151,8 +168,8 @@ elif st.session_state.page == 'order':
             st.markdown(f"""
                 <div style="text-align: center; margin-bottom: 10px;"><h2 style="color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2></div>
                 <div style="text-align: right; margin-bottom: 20px;">
-                    <div style="font-size: 28px; font-weight: bold; color: #1E3A8A;">الزبون: {cust}</div>
-                    <div style="font-size: 18px; margin-top: 5px; color: #333;">التاريخ: {now_date}</div>
+                    <div style="font-size: 26px; font-weight: bold; color: #1E3A8A;">الزبون: {cust}</div>
+                    <div style="font-size: 16px; margin-top: 5px; color: #333;">التاريخ: {now_date}</div>
                     <div style="font-size: 16px; margin-top: 5px; color: #555;">المندوب: {st.session_state.user_name}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -181,7 +198,6 @@ elif st.session_state.page == 'order':
                     <div class="summary-row highlight-blue"><span>المجموع بعد الحسم:</span><span>${total_after_disc:,.2f}</span></div>
                     <div class="summary-row"><span>الضريبة 11%:</span><span>+${total_vat:,.2f}</span></div>
                     <div class="final-total-box">المجموع الصافي: ${final_net:,.2f}</div>
-                    <div class="lbp-box">قيمة الـ VAT بالليرة (سعر 89,500): <br> {int(total_vat * 89500):,} ل.ل.</div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -194,11 +210,8 @@ elif st.session_state.page == 'order':
                         st.success("✅ تم الحفظ والإرسال بنجاح!")
                         st.rerun()
             with col_p:
-                # هذا الزر لا يعمل إلا إذا كانت is_sent تساوي True
                 if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-                if not st.session_state.is_sent:
-                    st.caption("⚠️ يجب الضغط على 'حفظ وإرسال' أولاً لتتمكن من الطباعة.")
 
         st.divider()
         col_back, col_rec = st.columns(2)
@@ -207,6 +220,6 @@ elif st.session_state.page == 'order':
                 st.session_state.page = 'home'
                 st.rerun()
         with col_rec:
-            if st.button("🧾 طباعة إيصال قبض", use_container_width=True):
+            if st.button("🧾 طباعة إشعار استلام", use_container_width=True):
                 st.session_state.receipt_view = True
                 st.rerun()
