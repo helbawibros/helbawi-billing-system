@@ -45,9 +45,9 @@ if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'home'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 
-# --- شاشة تسجيل الدخول (مثل ما هي) ---
+# --- 🔐 الصفحة الأولى: شاشة تسجيل الدخول ---
 if not st.session_state.logged_in:
-    st.markdown('<div class="header-box"><h1>🔐 دخول المناديب</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_choice = st.selectbox("إختر اسمك", ["-- اختر اسمك --"] + list(USERS.keys()))
     password_input = st.text_input("كلمة السر", type="password")
     
@@ -59,7 +59,7 @@ if not st.session_state.logged_in:
         else:
             st.error("❌ كلمة المرور غير صحيحة")
 
-# --- الصفحة الثانية بعد الدخول ---
+# --- الصفحة الثانية: الترحيب ---
 else:
     if st.session_state.page == 'home':
         st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
@@ -70,8 +70,8 @@ else:
             </div>
         """, unsafe_allow_html=True)
         
-        # تعديل المسمى بناءً على طلبك (دخول المندوبين)
-        if st.button("📝 دخول المندوبين", use_container_width=True, type="primary"):
+        # الزر المطلوب في الصفحة الثانية
+        if st.button("📝 تسجيل الفاتورة", use_container_width=True, type="primary"):
             st.session_state.page = 'order_page'
             st.rerun()
             
@@ -79,7 +79,7 @@ else:
             st.session_state.logged_in = False
             st.rerun()
 
-    # --- صفحة الفوترة المحدثة ---
+    # --- صفحة الطلبية ---
     elif st.session_state.page == 'order_page':
         # أ- رقم الفاتورة في الأعلى الوسط
         inv_no = str(random.randint(10000, 99999))
@@ -90,16 +90,16 @@ else:
         # ب- اسم الزبون والحسم على نفس السطر
         col_cust, col_disc = st.columns([3, 1])
         with col_cust:
-            # سيتم ربطها غداً بمحرك بحث الزبائن من الإكسل
             cust_name = st.text_input("👤 اسم الزبون")
         with col_disc:
             discount_pct = st.number_input("الحسم %", min_value=0, max_value=6, step=1)
 
         st.divider()
 
-        # ج- نظام البحث عن الأصناف (سيتم استكماله بناءً على شرحك القادم)
-        st.write("🔧 سيتم استكمال نظام التابلو والبحث هنا...")
+        # ج- مكان استكمال نظام التابلو والبحث
+        st.write("🔧 بانتظار شرحك لتكملة نظام البحث والتابلو هنا...")
         
         if st.button("🔙 عودة"):
             st.session_state.page = 'home'
             st.rerun()
+
