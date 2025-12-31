@@ -4,32 +4,26 @@ import random
 from datetime import datetime
 import requests
 
-# --- 1. إعدادات الصفحة والتنسيق الاحترافي (نفس الشكل المطلوب) ---
+# --- 1. إعدادات الصفحة والتنسيق الاحترافي ---
 st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
-    
-    /* إخفاء نصوص المساعدة المزعجة */
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] { display: none !important; }
-    
     .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
     
-    /* تنسيق الطباعة */
     @media print {
         .no-print { display: none !important; }
         .stButton, .stTextInput, .stSelectbox { display: none !important; }
         body { background-color: white !important; }
     }
 
-    /* تنسيق الجدول بحدود واضحة وعريضة */
     .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 18px; text-align: center; }
     .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 12px; border: 1px solid #ddd; }
     .styled-table td { padding: 12px; border: 1px solid #ddd; }
     
-    /* تنسيق منطقة الحسابات الملونة كما في الصورة */
     .summary-container { border-top: 2px solid #1E3A8A; margin-top: 20px; padding-top: 10px; }
     .summary-row { display: flex; justify-content: space-between; padding: 8px 15px; font-size: 18px; border-bottom: 1px solid #eee; }
     .highlight-blue { color: #1E3A8A; font-weight: bold; font-size: 20px; }
@@ -38,30 +32,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. دالة الإرسال عبر رابطك (مؤكدة 100%) ---
+# --- 2. دالة الإرسال ---
 def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time):
     url = "https://script.google.com/macros/s/AKfycbzi3kmbVyg_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
-    data = {
-        "vat_value": vat,
-        "total_before": total_pre,
-        "invoice_no": inv_no,
-        "cust_name": customer,
-        "rep_name": representative,
-        "date_full": date_time
-    }
+    data = {"vat_value": vat, "total_before": total_pre, "invoice_no": inv_no, "cust_name": customer, "rep_name": representative, "date_full": date_time}
     try:
         requests.post(url, data=data, timeout=10)
         return True
-    except:
-        return False
+    except: return False
 
 # --- 3. قاعدة البيانات ---
-USERS = {
-    "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", 
-    "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", 
-    "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"
-}
-
+USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 PRODUCTS = {
     "حمص١٢ ٩٠٧غ": 2.20, "حمص٩ ٩٠٧ غ": 2.00, "عدس مجروش ٩٠٧غ": 1.75, "عدس عريض٩٠٧غ": 1.90,
     "عدس احمر ٩٠٧غ": 1.75, "ازر مصري ٩٠٧غ": 1.15, "ارز ايطالي ٩٠٧ غ": 2.25, "ارز عنبري ١٠٠٠غ": 1.90,
@@ -73,6 +54,10 @@ if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(10000, 99999))
 if 'confirmed' not in st.session_state: st.session_state.confirmed = False
+
+# مفاتيح التحكم بمسح الخانات
+if 'search_val' not in st.session_state: st.session_state.search_val = ""
+if 'qty_val' not in st.session_state: st.session_state.qty_val = ""
 
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
@@ -98,17 +83,18 @@ elif st.session_state.page == 'home':
         st.rerun()
 
 elif st.session_state.page == 'order':
-    st.markdown(f'<h3 class="no-print" style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h3>', unsafe_allow_html=True)
+    st.markdown(f'<h2 class="no-print" style="text-align:center; color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2>', unsafe_allow_html=True)
     
     col_c1, col_c2 = st.columns(2)
     with col_c1: cust = st.text_input("اسم الزبون (المحل)")
     with col_c2: disc_input = st.text_input("الحسم %", value="0")
 
     st.divider()
-    search = st.text_input("🔍 ابحث عن صنف...")
+    # استخدام session_state لمسح الخانات تلقائياً
+    search = st.text_input("🔍 ابحث عن صنف...", value=st.session_state.search_val, key="s_input")
     filtered = [p for p in PRODUCTS.keys() if search in p] if search else list(PRODUCTS.keys())
     sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered)
-    qty_str = st.text_input("العدد")
+    qty_str = st.text_input("العدد", value=st.session_state.qty_val, key="q_input")
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
@@ -117,6 +103,9 @@ elif st.session_state.page == 'order':
                 q = float(convert_ar_nav(qty_str))
                 st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
                 st.session_state.confirmed = False
+                # مسح الخانات
+                st.session_state.search_val = ""
+                st.session_state.qty_val = ""
                 st.rerun()
     with col_btn2:
         if st.button("✅ تثبيت الفاتورة", use_container_width=True, type="primary"):
@@ -125,40 +114,47 @@ elif st.session_state.page == 'order':
     if st.session_state.confirmed and st.session_state.temp_items:
         st.markdown("<hr class='no-print'>", unsafe_allow_html=True)
         
-        # معلومات الرأس للطباعة
+        # --- رأس الفاتورة المعدل (التصميم المطلوب) ---
+        now_date = datetime.now().strftime("%Y-%m-%d")
         st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; font-size:18px; margin-bottom:10px;">
-                <div><b>الزبون:</b> {cust}</div>
-                <div><b>المندوب:</b> {st.session_state.user_name}</div>
+            <div style="text-align: center; margin-bottom: -10px;"><h2 style="color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2></div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div style="text-align: right;">
+                    <div style="font-size: 26px; font-weight: bold; color: #1E3A8A;">الزبون: {cust}</div>
+                    <div style="font-size: 18px; margin-top: 5px;">التاريخ: {now_date}</div>
+                </div>
+                <div style="text-align: left;">
+                    <div style="font-size: 16px; color: #555;">المندوب: {st.session_state.user_name}</div>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # حسابات الحسم والضريبة
         h_val = float(convert_ar_nav(disc_input)) if disc_input else 0
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         discount_amt = raw_total * (h_val / 100)
         total_after_disc = raw_total - discount_amt
         
+        # جدول الفاتورة مع تقديم VAT قبل الإجمالي
         total_vat = 0
-        table_html = '<table class="styled-table"><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr>'
+        table_html = '<table class="styled-table"><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>VAT</th><th>الإجمالي</th></tr>'
         for item in st.session_state.temp_items:
             line_total = item["العدد"] * item["السعر"]
-            if "*" in item["الصنف"]:
-                total_vat += (line_total * (1 - h_val/100)) * 0.11
-            table_html += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_total:.2f}</td></tr>'
+            line_vat = (line_total * (1 - h_val/100)) * 0.11 if "*" in item["الصنف"] else 0
+            total_vat += line_vat
+            table_html += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
         table_html += '</table>'
         st.markdown(table_html, unsafe_allow_html=True)
 
         final_net = total_after_disc + total_vat
 
-        # منطقة الحسابات الملونة (نفس الصورة)
+        # أسطر المحاسبة المطلوبة
         st.markdown(f"""
             <div class="summary-container">
-                <div class="summary-row"><span>المجموع (قبل الحسم):</span><span>${raw_total:,.2f}</span></div>
-                <div class="summary-row"><span>قيمة الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
+                <div class="summary-row"><span>المجموع:</span><span>${raw_total:,.2f}</span></div>
+                <div class="summary-row"><span>الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
                 <div class="summary-row highlight-blue"><span>المجموع بعد الحسم:</span><span>${total_after_disc:,.2f}</span></div>
-                <div class="summary-row"><span>ضريبة VAT (بعد الحسم):</span><span>+${total_vat:,.2f}</span></div>
-                <div class="final-total-box">الصافي النهائي: ${final_net:,.2f}</div>
+                <div class="summary-row"><span>الضريبة 11%:</span><span>+${total_vat:,.2f}</span></div>
+                <div class="final-total-box">المجموع الصافي: ${final_net:,.2f}</div>
                 <div class="lbp-box">قيمة الـ VAT بالليرة (سعر 89,500): <br> {int(total_vat * 89500):,} ل.ل.</div>
             </div>
         """, unsafe_allow_html=True)
@@ -166,13 +162,13 @@ elif st.session_state.page == 'order':
         col_s, col_p = st.columns(2)
         with col_s:
             if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
-                now = datetime.now().strftime("%Y-%m-%d %H:%M")
-                if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, now):
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+                if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, now_str):
                     st.success("✅ تم الإرسال بنجاح!")
         with col_p:
             if st.button("🖨️ طباعة الفاتورة", use_container_width=True):
                 st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
-    if st.button("🔙 عودة للرئيسية", key="back"):
+    if st.button("🔙 عودة", key="back"):
         st.session_state.page = 'home'
         st.rerun()
