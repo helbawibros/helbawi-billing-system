@@ -12,13 +12,9 @@ URL_LINK = "https://script.google.com/macros/s/AKfycbyaxdN2TPOOXsNSx8yy4eKBhLPcc
 
 # 2. قاعدة بيانات المناديب الثابتة
 USERS = {
-    "محمد الحسيني": "8822",
-    "علي دوغان": "5500",
-    "عزات حلاوي": "6611",
-    "علي حسين حلباوي": "4455",
-    "محمد حسين حلباوي": "3366",
-    "احمد حسين حلباوي": "7722",
-    "علي محمد حلباوي": "6600"
+    "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611",
+    "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366",
+    "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"
 }
 
 # دالة تحويل الأرقام العربية
@@ -27,7 +23,7 @@ def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# 3. التنسيقات الجمالية (CSS)
+# 3. التنسيقات (CSS) لضمان ظهور العناصر بجانب بعضها
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
@@ -36,14 +32,17 @@ st.markdown("""
     .welcome-container { text-align: center; margin: 20px 0; }
     .welcome-text { font-size: 22px; color: #1E3A8A; font-weight: 800; }
     .blessing-text { font-size: 18px; color: #2e7d32; font-weight: 600; margin-top: 5px; }
-    .invoice-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #000; }
+    .invoice-header { text-align: center; font-size: 26px; font-weight: bold; margin: 10px 0; color: #000; }
+    /* ستايل لجعل الحقول تظهر بجانب بعضها بشكل أفضل على الموبايل */
+    [data-testid="column"] { width: 100% !important; flex: 1 1 auto !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. إدارة حالة التطبيق (Session State)
+# 4. إدارة حالة التطبيق
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'home'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
+if 'inv_no' not in st.session_state: st.session_state.inv_no = str(random.randint(10000, 99999))
 
 # --- 🔐 الصفحة الأولى: شاشة تسجيل الدخول ---
 if not st.session_state.logged_in:
@@ -70,7 +69,6 @@ else:
             </div>
         """, unsafe_allow_html=True)
         
-        # الزر المطلوب في الصفحة الثانية
         if st.button("📝 تسجيل الفاتورة", use_container_width=True, type="primary"):
             st.session_state.page = 'order_page'
             st.rerun()
@@ -79,27 +77,46 @@ else:
             st.session_state.logged_in = False
             st.rerun()
 
-    # --- صفحة الطلبية ---
+    # --- صفحة الطلبية (التنسيق المطلوب) ---
     elif st.session_state.page == 'order_page':
-        # أ- رقم الفاتورة في الأعلى الوسط
-        inv_no = str(random.randint(10000, 99999))
-        st.markdown(f'<div class="invoice-header">رقم الفاتورة: {inv_no}</div>', unsafe_allow_html=True)
+        # أ- رقم الفاتورة في الوسط
+        st.markdown(f'<div class="invoice-header">رقم الفاتورة: {st.session_state.inv_no}</div>', unsafe_allow_html=True)
         
         st.divider()
 
-        # ب- اسم الزبون والحسم على نفس السطر
-        col_cust, col_disc = st.columns([3, 1])
-        with col_cust:
-            cust_name = st.text_input("👤 اسم الزبون")
-        with col_disc:
+        # ب- اسم الزبون والحسم على سطر واحد (مهم جداً)
+        col_c, col_d = st.columns([3, 1])
+        with col_c:
+            cust_name = st.text_input("👤 اسم الزبون", label_visibility="visible")
+        with col_d:
             discount_pct = st.number_input("الحسم %", min_value=0, max_value=6, step=1)
 
         st.divider()
 
-        # ج- مكان استكمال نظام التابلو والبحث
-        st.write("🔧 بانتظار شرحك لتكملة نظام البحث والتابلو هنا...")
+        # ج- الصنف والعدد على سطر واحد
+        all_products = ["حمص رقم 12 907غ", "حمص رقم 9 907غ", "فول عريض 1000غ"] # مثال
         
+        col_p, col_q = st.columns([3, 1])
+        with col_p:
+            search_p = st.text_input("🔍 ابحث عن صنف...")
+            filtered = [p for p in all_products if search_p in p] if search_p else all_products
+            selected_p = st.selectbox("اختر الصنف", ["-- اختر --"] + filtered)
+        with col_q:
+            qty_raw = st.text_input("العدد", value="1")
+
+        if st.button("➕ إضافة", use_container_width=True):
+            if selected_p != "-- اختر --" and cust_name:
+                qty_val = int(convert_ar_nav(qty_raw))
+                st.session_state.temp_items.append({
+                    "الصنف": selected_p, "الكمية": qty_val, "السعر": 2.5, "الإجمالي": qty_val * 2.5
+                })
+                st.success(f"تمت إضافة {selected_p}")
+
+        # د- الجدول (التابلو)
+        if st.session_state.temp_items:
+            df = pd.DataFrame(st.session_state.temp_items)
+            st.table(df[["الصنف", "الكمية", "الإجمالي"]])
+
         if st.button("🔙 عودة"):
             st.session_state.page = 'home'
             st.rerun()
-
