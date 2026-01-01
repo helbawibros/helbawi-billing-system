@@ -215,4 +215,3 @@ elif st.session_state.page == 'order':
             if st.button("🔙 الرئيسية"): st.session_state.page = 'home'; st.rerun()
         with col_r:
             if st.button("🧾 إشعار استلام"): st.session_state.receipt_view = True; st.rerun()
-
