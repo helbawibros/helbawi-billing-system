@@ -23,16 +23,15 @@ st.markdown("""
 
     .invoice-preview { background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }
     
-    /* التعديل الجديد في الهيدر */
+    /* تعديل الهيدر لرفع رقم الفاتورة بجانب اسم الشركة */
     .company-header-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; }
     .company-info-text { text-align: right; }
-    .inv-no-box { border: 1px solid #1E3A8A; padding: 5px 10px; font-weight: bold; font-size: 16px; }
+    .inv-no-box { border: 1px solid #1E3A8A; padding: 5px 10px; font-weight: bold; font-size: 16px; margin-top: 5px; }
     
     .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
     .company-details { font-size: 16px; color: black; line-height: 1.4; }
     .invoice-title { font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 15px 0; text-decoration: underline; text-align: center; }
     
-    /* سطر الزبون والمندوب */
     .invoice-info-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
     .cust-right { text-align: right; font-size: 22px; font-weight: 800; flex-grow: 1; }
     .meta-left { text-align: left; font-size: 12px; color: #333; line-height: 1.3; }
@@ -130,7 +129,6 @@ elif st.session_state.page == 'home':
 
 elif st.session_state.page == 'order':
     if st.session_state.receipt_view:
-        # (بقي كما هو في كودك)
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         total_after_disc = raw_total * (1 - h_val/100)
@@ -141,7 +139,7 @@ elif st.session_state.page == 'order':
         if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
 
     else:
-        st.markdown(f'<h2 class="no-print" style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h2>', unsafe_allow_html=True)
+        st.markdown(f'<h2 class="no-print" style="text-align:center;">إدخال فاتورة رقم #{st.session_state.inv_no}</h2>', unsafe_allow_html=True)
         cust_dict = load_rep_customers(st.session_state.user_name)
         col_c1, col_c2 = st.columns(2)
         with col_c1:
@@ -175,6 +173,7 @@ elif st.session_state.page == 'order':
             total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
             final_net = total_after_disc + total_vat
 
+            # شكل الفاتورة بعد التعديل لرفع الرقم للأعلى
             st.markdown(f"""
                 <div class="invoice-preview">
                     <div class="company-header-top">
@@ -210,7 +209,7 @@ elif st.session_state.page == 'order':
             with col_save:
                 if st.button("💾 حفظ وإرسال", use_container_width=True):
                     if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
-                        st.session_state.is_sent = True; st.success("✅ تم الحفظ")
+                        st.session_state.is_sent = True; st.success("✅ تم الحفظ بنجاح")
             with col_print:
                 if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
