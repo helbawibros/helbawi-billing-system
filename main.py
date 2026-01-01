@@ -90,7 +90,7 @@ def load_products_from_excel():
 PRODUCTS = load_products_from_excel()
 
 def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time, is_ret=False):
-    url = "https://script.google.com/macros/s/AKfycbzi3kmbVyb_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
+    url = "https://script.google.com/macros/s/AKfycbzi3kmbVyg_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
     prefix = "(مرتجع) " if is_ret else ""
     data = {"vat_value": vat, "total_before": total_pre, "invoice_no": inv_no, "cust_name": f"{prefix}{customer}", "rep_name": representative, "date_full": date_time}
     try:
@@ -189,9 +189,14 @@ elif st.session_state.page == 'order':
 
         if st.button("➕ إضافة صنف", use_container_width=True):
             if sel_p != "-- اختر --" and qty:
-                st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(convert_ar_nav(qty)), "السعر": PRODUCTS[sel_p]})
-                st.session_state.widget_id += 1
-                st.rerun()
+                try:
+                    # التعديل ليدعم الكسور (مثل 0.5)
+                    q_val = float(convert_ar_nav(qty))
+                    st.session_state.temp_items.append({"الصنف": sel_p, "العدد": q_val, "السعر": PRODUCTS[sel_p]})
+                    st.session_state.widget_id += 1
+                    st.rerun()
+                except ValueError:
+                    st.error("الرجاء إدخال رقم صحيح أو كسر (0.5)")
 
         if st.button("👁️ معاينة الفاتورة", use_container_width=True, type="primary"): st.session_state.confirmed = True
 
@@ -205,6 +210,7 @@ elif st.session_state.page == 'order':
                 line_total = itm["العدد"] * itm["السعر"]
                 line_vat = (line_total * (1 - h/100)) * 0.11 if "*" in itm["الصنف"] else 0
                 total_vat += line_vat
+                # عرض العدد بتنسيق يقبل الكسور
                 rows_html += f'<tr><td>{itm["الصنف"]}</td><td>{itm["العدد"]}</td><td>{itm["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
             net = aft + total_vat
 
@@ -237,7 +243,6 @@ elif st.session_state.page == 'order':
             """, unsafe_allow_html=True)
             
             if st.button("💾 حفظ وإرسال", use_container_width=True):
-                # إذا كان مرتجع، نرسل القيم سالبة للجداول
                 val_vat = f"-{total_vat:.2f}" if is_ret else f"{total_vat:.2f}"
                 val_raw = f"-{raw:.2f}" if is_ret else f"{raw:.2f}"
                 if send_to_google_sheets(val_vat, val_raw, st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M"), is_ret):
