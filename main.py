@@ -23,12 +23,12 @@ st.markdown("""
 
     .invoice-preview { background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }
     
-    /* تنسيق الهيدر: اسم الشركة في المنتصف */
+    /* اسم الشركة في المنتصف بنفس حجم الخط */
     .company-header-center { text-align: center; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; margin-bottom: 10px; }
     .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
     .company-details { font-size: 16px; color: black; line-height: 1.4; }
     
-    /* عنوان الفاتورة والرقم تحته بخط صغير */
+    /* عنوان الفاتورة ورقمها تحته بخط صغير */
     .invoice-title-section { text-align: center; margin: 15px 0; }
     .invoice-main-title { font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }
     .invoice-no-small { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
@@ -99,20 +99,20 @@ USERS = {
     "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"
 }
 
+# --- إدارة الحالة ---
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'confirmed' not in st.session_state: st.session_state.confirmed = False
 if 'receipt_view' not in st.session_state: st.session_state.receipt_view = False
 if 'is_sent' not in st.session_state: st.session_state.is_sent = False
-# هذا المفتاح هو السر في تصفير الخانات
 if 'widget_id' not in st.session_state: st.session_state.widget_id = 0
 
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# --- التطبيق ---
+# --- الواجهات ---
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -132,7 +132,6 @@ elif st.session_state.page == 'home':
 
 elif st.session_state.page == 'order':
     if st.session_state.receipt_view:
-        # إيصال الاستلام (بقي كما هو في كودك)
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         total_after_disc = raw_total * (1 - h_val/100)
@@ -157,18 +156,18 @@ elif st.session_state.page == 'order':
         st.session_state.last_cust, st.session_state.last_disc = cust, disc_input
         st.divider()
 
-        # هنا نستخدم st.session_state.widget_id لتصفير الخانات
-        search_p = st.text_input("🔍 ابحث عن صنف...", key=f"search_{st.session_state.widget_id}")
+        # سر تصفير البحث: استخدام Widget ID متغير
+        w_id = st.session_state.widget_id
+        search_p = st.text_input("🔍 ابحث عن صنف...", key=f"search_{w_id}")
         filtered_p = [p for p in PRODUCTS.keys() if search_p in p] if search_p else list(PRODUCTS.keys())
-        sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered_p, key=f"select_{st.session_state.widget_id}")
-        qty_str = st.text_input("العدد", key=f"qty_{st.session_state.widget_id}")
+        sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered_p, key=f"select_{w_id}")
+        qty_str = st.text_input("العدد", key=f"qty_{w_id}")
 
         if st.button("➕ إضافة صنف", use_container_width=True):
             if sel_p != "-- اختر الصنف --" and qty_str:
                 q = float(convert_ar_nav(qty_str))
                 st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
-                # تغيير الـ ID يؤدي لمسح الخانات فوراً
-                st.session_state.widget_id += 1 
+                st.session_state.widget_id += 1 # هنا يتم تصفير الخانات
                 st.rerun()
 
         if st.button("👁️ معاينة الفاتورة", use_container_width=True, type="primary"): 
@@ -182,7 +181,6 @@ elif st.session_state.page == 'order':
             total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
             final_net = total_after_disc + total_vat
 
-            # شكل الفاتورة النهائي
             st.markdown(f"""
                 <div class="invoice-preview">
                     <div class="company-header-center">
@@ -222,7 +220,7 @@ elif st.session_state.page == 'order':
             with col_save:
                 if st.button("💾 حفظ وإرسال", use_container_width=True):
                     if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
-                        st.session_state.is_sent = True; st.success("✅ تم الحفظ")
+                        st.session_state.is_sent = True; st.success("✅ تم الحفظ بنجاح")
             with col_print:
                 if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
