@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 
 # --- 1. إعدادات التنسيق والهوية ---
-LOGO_FILE = "IMG_6470.jpeg"
+LOGO_FILE = "Lgo.png"
 
 st.set_page_config(
     page_title="شركة حلباوي إخوان", 
@@ -19,13 +19,16 @@ st.markdown(f"""
     html, body, [class*="css"] {{ font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }}
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] {{ display: none !important; }}
     
-    /* تنسيق اللوغو ليكون في المنتصف وبحجم مرتب */
-    .logo-container {{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 10px 0;
-        margin-top: -20px;
+    /* تنسيق اللوغو ليأخذ عرض الشاشة بالكامل وبدون حواف */
+    .full-width-logo-container {{
+        width: 100%;
+        margin: -60px 0 20px 0; /* تقليل الفراغ العلوي */
+        text-align: center;
+    }}
+    .full-width-logo-img {{
+        width: 100%; /* العرض الكامل */
+        height: auto;
+        display: block;
     }}
 
     .header-box {{ background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}}
@@ -68,7 +71,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات البيانات والاتصال ---
+# --- 2. إعدادات البيانات ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
@@ -115,6 +118,7 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
 
 USERS = {"عبد الكريم حوراني": "9900", "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 
+# إدارة الحالة
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
@@ -128,12 +132,10 @@ def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# --- 3. عرض اللوغو في المنتصف ---
-st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-st.image(LOGO_FILE, width=160)
-st.markdown('</div>', unsafe_allow_html=True)
+# --- عرض اللوغو بعرض الشاشة ---
+st.image(LOGO_FILE, use_container_width=True)
 
-# --- 4. الواجهات البرمجية ---
+# --- الواجهات ---
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -161,7 +163,6 @@ elif st.session_state.page == 'home':
 elif st.session_state.page == 'order':
     is_ret = st.session_state.is_return
     if st.session_state.receipt_view:
-        # حسابات الإيصال
         raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         aft = raw * (1 - h/100)
