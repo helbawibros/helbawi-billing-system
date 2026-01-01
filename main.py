@@ -41,21 +41,22 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات الربط بالإكسل (استخدام الرقم من صورتك) ---
+# --- 2. إعدادات الربط بالإكسل (تم دمج الرابط لمنع أخطاء النسخ) ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
-GID_CUSTOMERS = "155973706" # الرقم المستخرج من صورتك لصفحة الزبائن
+# ملاحظة: تأكد من وضع GID صفحة "الزبائن" هنا
+GID_CUSTOMERS = "1135805404" 
 
 @st.cache_data(ttl=60)
 def load_rep_customers(rep_name):
     try:
         url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_CUSTOMERS}"
         df = pd.read_csv(url)
-        # تصفية حسب اسم المندوب (العمود A)
+        # تصفية الزبائن بناءً على العمود الأول (المندوب)
         rep_df = df[df.iloc[:, 0].astype(str).str.strip() == rep_name.strip()]
-        # ربط الزبون (B) بالعنوان (C)
-        return {f"{row.iloc[1]} ({row.iloc[2]})": row.iloc[1] for _, row in rep_df.iterrows()}
+        # إنشاء قاموس يربط (اسم الزبون + العنوان) بـ (اسم الزبون فقط)
+        return {f"{row.iloc[1]} - {row.iloc[2]}": row.iloc[1] for _, row in rep_df.iterrows()}
     except: return {}
 
 def get_next_invoice_number():
@@ -74,8 +75,9 @@ def load_products_from_excel():
         url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_PRICES}"
         df_p = pd.read_csv(url)
         df_p.columns = [c.strip() for c in df_p.columns]
+        # استخدام العمود الأول للاسم والثاني للسعر
         return pd.Series(df_p.iloc[:, 1].values, index=df_p.iloc[:, 0]).to_dict()
-    except: return {"⚠️ خطأ في التحميل": 0.0}
+    except: return {"⚠️ خطأ في تحميل الأصناف": 0.0}
 
 PRODUCTS = load_products_from_excel()
 
@@ -117,7 +119,7 @@ if not st.session_state.logged_in:
 
 elif st.session_state.page == 'home':
     st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:22px;">ببركة الصلاة على محمد وال محمد</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:20px;">ببركة الصلاة على محمد وال محمد</p></div>', unsafe_allow_html=True)
     if st.button("📝 تسجيل فاتورة جديدة", use_container_width=True, type="primary"):
         st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view, st.session_state.is_sent = 'order', [], False, False, False
         st.session_state.inv_no = get_next_invoice_number()
@@ -125,29 +127,34 @@ elif st.session_state.page == 'home':
 
 elif st.session_state.page == 'order':
     if st.session_state.receipt_view:
+        # واجهة إشعار الاستلام
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         total_after_disc = raw_total * (1 - h_val/100)
         total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
         final_net = total_after_disc + total_vat
         cust_name = st.session_state.get('last_cust', '..........')
-        st.markdown(f'<div class="thermal-receipt"><div class="receipt-header">شركة حلباوي إخوان ش.م.م</div><div class="receipt-sub">لبنان - بيروت - الرويس<br>03/220893 - 01/556058</div><div class="receipt-title">إشعار بالاستلام</div><div class="receipt-body">وصلنا من السيد: <b>{cust_name}</b><br>مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>وذلك عن فاتورة رقم: #{st.session_state.inv_no}</div><div class="receipt-footer">التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>المندوب: {st.session_state.user_name}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="thermal-receipt"><div class="receipt-header">شركة حلباوي إخوان ش.م.م</div><div class="receipt-sub">لبنان - بيروت - الرويس<br>01/556058</div><div class="receipt-title">إشعار بالاستلام</div><div class="receipt-body">وصلنا من السيد: <b>{cust_name}</b><br>مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>وذلك عن فاتورة رقم: #{st.session_state.inv_no}</div><div class="receipt-footer">التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>المندوب: {st.session_state.user_name}</div></div>', unsafe_allow_html=True)
         if st.button("🖨️ طباعة الإيصال", use_container_width=True): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
         if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
 
     else:
         st.markdown(f'<h2 class="no-print" style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h2>', unsafe_allow_html=True)
         
+        # ربط قائمة الزبائن
         cust_dict = load_rep_customers(st.session_state.user_name)
         col_c1, col_c2 = st.columns(2)
         with col_c1:
             search_c = st.text_input("🔍 ابحث عن زبون...")
             filtered_c = [k for k in cust_dict.keys() if search_c in k] if search_c else list(cust_dict.keys())
-            sel_display = st.selectbox("اختر الزبون", ["-- اختر --"] + filtered_c)
-            cust = cust_dict.get(sel_display, sel_display if sel_display != "-- اختر --" else "")
+            sel_display = st.selectbox("اختر الزبون", ["-- اختر من القائمة --"] + filtered_c)
+            cust = cust_dict.get(sel_display, sel_display if sel_display != "-- اختر من القائمة --" else "")
         with col_c2:
             disc_input = st.text_input("الحسم %", value="0")
         
+        if not cust_dict:
+            cust = st.text_input("اسم الزبون (يدوي)")
+
         st.session_state.last_cust, st.session_state.last_disc = cust, disc_input
 
         st.divider()
@@ -162,7 +169,8 @@ elif st.session_state.page == 'order':
                 st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
                 st.rerun()
 
-        if st.button("👁️ معاينة الفاتورة", use_container_width=True, type="primary"): st.session_state.confirmed = True
+        if st.button("👁️ معاينة وتثبيت الفاتورة", use_container_width=True, type="primary"): 
+            st.session_state.confirmed = True
 
         if st.session_state.confirmed and st.session_state.temp_items:
             h_val = float(convert_ar_nav(disc_input)) if disc_input else 0
@@ -197,19 +205,20 @@ elif st.session_state.page == 'order':
                 </div>
             """, unsafe_allow_html=True)
             
-            col_save, col_print = st.columns(2)
-            with col_save:
-                if st.button("💾 حفظ وإرسال", use_container_width=True):
+            col_s, col_p = st.columns(2)
+            with col_s:
+                if st.button("💾 حفظ الفاتورة", use_container_width=True):
                     if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
                         st.session_state.is_sent = True
-                        st.success("✅ تم الحفظ بنجاح")
-            with col_print:
+                        st.success("✅ تم الحفظ بنجاح!")
+            with col_p:
                 if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
         st.divider()
-        col_b, col_r = st.columns(2)
-        with col_b:
-            if st.button("🔙 الرئيسية"): st.session_state.page = 'home'; st.rerun()
-        with col_r:
+        col_back, col_rec = st.columns(2)
+        with col_back:
+            if st.button("🔙 عودة للرئيسية"): st.session_state.page = 'home'; st.rerun()
+        with col_rec:
             if st.button("🧾 إشعار استلام"): st.session_state.receipt_view = True; st.rerun()
+
