@@ -37,7 +37,6 @@ st.markdown("""
     .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #ddd; }
     .total-final { background-color: #d4edda; font-size: 22px; font-weight: 800; color: #155724; border: 2px solid #c3e6cb; margin-top: 10px; padding: 10px; text-align: center; }
 
-    /* تصميم الإيصال الجديد المطابق للصورة */
     .receipt-container { background-color: white; padding: 20px; color: black; text-align: center; border: 1px solid #eee; }
     .receipt-comp-name { font-size: 32px; font-weight: 800; margin-bottom: 5px; }
     .receipt-comp-addr { font-size: 18px; margin-bottom: 2px; }
@@ -133,8 +132,6 @@ elif st.session_state.page == 'order':
         vat = sum(((i["العدد"] * i["السعر"]) * (1 - h/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
         net = aft + vat
         c_n = st.session_state.get('last_cust', '..........')
-        
-        # عرض الإيصال بالشكل المطلوب في الصورة
         st.markdown(f"""
             <div class="receipt-container">
                 <div class="receipt-comp-name">شركة حلباوي إخوان ش.م.م</div>
@@ -154,7 +151,6 @@ elif st.session_state.page == 'order':
                 </div>
             </div>
         """, unsafe_allow_html=True)
-        
         if st.button("🖨️ طباعة الإيصال", use_container_width=True): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
         if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
     
@@ -205,7 +201,7 @@ elif st.session_state.page == 'order':
                         <div class="invoice-main-title">فاتورة مبيعات</div>
                         <div class="invoice-no-small">رقم الفاتورة: #{st.session_state.inv_no}</div>
                     </div>
-                    <div class="styled-table" style="text-align:right; margin-bottom:10px;">الزبون: {cust} | التاريخ: {datetime.now().strftime("%Y-%m-%d")} | المندوب: {st.session_state.user_name}</div>
+                    <div style="text-align:right; font-weight:bold;">الزبون: {cust} | التاريخ: {datetime.now().strftime("%Y-%m-%d")} | المندوب: {st.session_state.user_name}</div>
                     <table class="styled-table">
                         <tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr>
                         {"".join([f'<tr><td>{x["الصنف"]}</td><td>{x["العدد"]}</td><td>{x["السعر"]:.2f}</td><td>{x["العدد"]*x["السعر"]:.2f}</td></tr>' for x in st.session_state.temp_items])}
