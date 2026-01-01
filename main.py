@@ -23,16 +23,17 @@ st.markdown("""
 
     .invoice-preview { background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }
     
-    /* اسم الشركة في المنتصف بنفس حجم الخط */
+    /* توسيط اسم الشركة */
     .company-header-center { text-align: center; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; margin-bottom: 10px; }
     .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
     .company-details { font-size: 16px; color: black; line-height: 1.4; }
     
-    /* عنوان الفاتورة ورقمها تحته بخط صغير */
+    /* تنسيق عنوان الفاتورة والرقم تحته */
     .invoice-title-section { text-align: center; margin: 15px 0; }
     .invoice-main-title { font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }
     .invoice-no-small { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
     
+    /* معلومات الزبون والمندوب */
     .invoice-info-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
     .cust-right { text-align: right; font-size: 22px; font-weight: 800; flex-grow: 1; }
     .meta-left { text-align: left; font-size: 11px; color: #444; line-height: 1.3; }
@@ -49,7 +50,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات الربط ---
+# --- 2. الإعدادات والبيانات ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
@@ -156,7 +157,7 @@ elif st.session_state.page == 'order':
         st.session_state.last_cust, st.session_state.last_disc = cust, disc_input
         st.divider()
 
-        # سر تصفير البحث: استخدام Widget ID متغير
+        # ميزة تصفير البحث عند الإضافة
         w_id = st.session_state.widget_id
         search_p = st.text_input("🔍 ابحث عن صنف...", key=f"search_{w_id}")
         filtered_p = [p for p in PRODUCTS.keys() if search_p in p] if search_p else list(PRODUCTS.keys())
@@ -167,7 +168,7 @@ elif st.session_state.page == 'order':
             if sel_p != "-- اختر الصنف --" and qty_str:
                 q = float(convert_ar_nav(qty_str))
                 st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
-                st.session_state.widget_id += 1 # هنا يتم تصفير الخانات
+                st.session_state.widget_id += 1 # تصفير الخانات
                 st.rerun()
 
         if st.button("👁️ معاينة الفاتورة", use_container_width=True, type="primary"): 
@@ -190,7 +191,7 @@ elif st.session_state.page == 'order':
                     
                     <div class="invoice-title-section">
                         <div class="invoice-main-title">فاتورة مبيعات</div>
-                        <div class="invoice-no-small">الرقم: #{st.session_state.inv_no}</div>
+                        <div class="invoice-no-small">رقم الفاتورة: #{st.session_state.inv_no}</div>
                     </div>
 
                     <div class="invoice-info-row">
