@@ -5,7 +5,12 @@ from datetime import datetime
 import requests
 
 # --- 1. إعدادات التنسيق والهوية ---
-st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
+# إضافة اللوغو في عنوان المتصفح (Favicon)
+st.set_page_config(
+    page_title="شركة حلباوي إخوان", 
+    layout="centered", 
+    page_icon="https://i.ibb.co/mF9fP7V/image.png" # رابط اللوغو الخاص بك
+)
 
 st.markdown("""
     <style>
@@ -13,6 +18,9 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] { display: none !important; }
     
+    .logo-container { text-align: center; margin-bottom: 20px; }
+    .logo-img { width: 150px; border-radius: 10px; }
+
     .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
     .return-header-box { background-color: #B22222; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
     
@@ -114,6 +122,9 @@ def convert_ar_nav(text):
     return "".join(n_map.get(c, c) for c in text)
 
 # --- الواجهات ---
+# عرض اللوغو في كل الصفحات
+st.markdown(f'<div class="logo-container"><img src="https://i.ibb.co/mF9fP7V/image.png" class="logo-img"></div>', unsafe_allow_html=True)
+
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -141,6 +152,7 @@ elif st.session_state.page == 'home':
 elif st.session_state.page == 'order':
     is_ret = st.session_state.is_return
     if st.session_state.receipt_view:
+        # (نفس منطق الإيصال السابق دون تغيير)
         raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         aft = raw * (1 - h/100)
@@ -190,7 +202,6 @@ elif st.session_state.page == 'order':
         if st.button("➕ إضافة صنف", use_container_width=True):
             if sel_p != "-- اختر --" and qty:
                 try:
-                    # التعديل ليدعم الكسور (مثل 0.5)
                     q_val = float(convert_ar_nav(qty))
                     st.session_state.temp_items.append({"الصنف": sel_p, "العدد": q_val, "السعر": PRODUCTS[sel_p]})
                     st.session_state.widget_id += 1
@@ -210,7 +221,6 @@ elif st.session_state.page == 'order':
                 line_total = itm["العدد"] * itm["السعر"]
                 line_vat = (line_total * (1 - h/100)) * 0.11 if "*" in itm["الصنف"] else 0
                 total_vat += line_vat
-                # عرض العدد بتنسيق يقبل الكسور
                 rows_html += f'<tr><td>{itm["الصنف"]}</td><td>{itm["العدد"]}</td><td>{itm["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
             net = aft + total_vat
 
@@ -256,3 +266,4 @@ elif st.session_state.page == 'order':
             if st.button("🔙 الرئيسية"): st.session_state.page = 'home'; st.rerun()
         with col_r:
             if st.button("🧾 إشعار استلام"): st.session_state.receipt_view = True; st.rerun()
+
