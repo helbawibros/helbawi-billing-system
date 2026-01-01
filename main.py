@@ -5,13 +5,13 @@ from datetime import datetime
 import requests
 
 # --- 1. إعدادات التنسيق والهوية ---
-# رابط اللوغو الجديد المباشر لضمان عدم ظهور "Image not found"
-LOGO_URL = "https://i.postimg.cc/0jMpxX8G/helbawi-logo.png"
+# نستخدم الملف الذي رفعته مباشرة لضمان عدم ظهور "Image not found"
+LOGO_FILE = "IMG_6470.jpeg"
 
 st.set_page_config(
     page_title="شركة حلباوي إخوان", 
     layout="centered", 
-    page_icon=LOGO_URL
+    page_icon=LOGO_FILE
 )
 
 st.markdown(f"""
@@ -124,8 +124,13 @@ def convert_ar_nav(text):
     return "".join(n_map.get(c, c) for c in text)
 
 # --- الواجهات ---
-# عرض اللوغو الجديد في أعلى كل الصفحات
-st.markdown(f'<div class="logo-container"><img src="{LOGO_URL}" class="logo-img"></div>', unsafe_allow_html=True)
+# عرض اللوغو المرفوع محلياً في أعلى كل الصفحات
+col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
+with col_logo_2:
+    try:
+        st.image(LOGO_FILE, use_container_width=True)
+    except:
+        st.error("يرجى التأكد من رفع ملف IMG_6470.jpeg على GitHub")
 
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
