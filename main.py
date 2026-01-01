@@ -161,8 +161,13 @@ elif st.session_state.page == 'order':
         with col1:
             search_c = st.text_input("🔍 ابحث عن زبون...")
             f_c = [k for k in cust_dict.keys() if search_c in k] if search_c else list(cust_dict.keys())
-            sel_c = st.selectbox("اختر الزبون", ["-- اختر --"] + f_c)
-            cust = cust_dict.get(sel_c, sel_c if sel_c != "-- اختر --" else "")
+            sel_c = st.selectbox("اختر الزبون", ["-- اختر --", "➕ زبون جديد (كتابة يدوية)"] + f_c)
+            
+            if sel_c == "➕ زبون جديد (كتابة يدوية)":
+                cust = st.text_input("اكتب اسم الزبون الجديد هنا")
+            else:
+                cust = cust_dict.get(sel_c, sel_c if sel_c != "-- اختر --" else "")
+                
         with col2:
             disc_input = st.text_input("الحسم %", value="0")
 
@@ -189,7 +194,6 @@ elif st.session_state.page == 'order':
             dis_a = raw * (h/100)
             aft = raw - dis_a
             
-            # حساب الـ VAT لكل صنف
             rows_html = ""
             total_vat = 0
             for itm in st.session_state.temp_items:
@@ -240,4 +244,3 @@ elif st.session_state.page == 'order':
             if st.button("🔙 الرئيسية"): st.session_state.page = 'home'; st.rerun()
         with col_r:
             if st.button("🧾 إشعار استلام"): st.session_state.receipt_view = True; st.rerun()
-
