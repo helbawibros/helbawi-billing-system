@@ -5,59 +5,61 @@ from datetime import datetime
 import requests
 
 # --- 1. إعدادات التنسيق والهوية ---
-# إضافة اللوغو في عنوان المتصفح (Favicon)
+# رابط اللوغو الجديد المباشر لضمان عدم ظهور "Image not found"
+LOGO_URL = "https://i.postimg.cc/0jMpxX8G/helbawi-logo.png"
+
 st.set_page_config(
     page_title="شركة حلباوي إخوان", 
     layout="centered", 
-    page_icon="https://i.ibb.co/mF9fP7V/image.png" # رابط اللوغو الخاص بك
+    page_icon=LOGO_URL
 )
 
-st.markdown("""
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }
-    div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] { display: none !important; }
+    html, body, [class*="css"] {{ font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }}
+    div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] {{ display: none !important; }}
     
-    .logo-container { text-align: center; margin-bottom: 20px; }
-    .logo-img { width: 150px; border-radius: 10px; }
+    .logo-container {{ text-align: center; margin-bottom: 20px; }}
+    .logo-img {{ width: 180px; border-radius: 10px; }}
 
-    .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
-    .return-header-box { background-color: #B22222; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
+    .header-box {{ background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}}
+    .return-header-box {{ background-color: #B22222; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}}
     
-    @media print {
-        .no-print { display: none !important; }
-        .stButton, .stTextInput, .stSelectbox { display: none !important; }
-        body { background-color: white !important; }
-    }
+    @media print {{
+        .no-print {{ display: none !important; }}
+        .stButton, .stTextInput, .stSelectbox {{ display: none !important; }}
+        body {{ background-color: white !important; }}
+    }}
 
-    .invoice-preview { background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }
-    .return-preview { background-color: white; padding: 25px; border: 2px solid #B22222; border-radius: 10px; color: black; }
-    .company-header-center { text-align: center; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; margin-bottom: 10px; }
-    .return-header-center { text-align: center; border-bottom: 2px double #B22222; padding-bottom: 10px; margin-bottom: 10px; }
-    .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
-    .company-details { font-size: 16px; color: black; line-height: 1.4; }
-    .invoice-title-section { text-align: center; margin: 15px 0; }
-    .invoice-main-title { font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }
-    .return-main-title { font-size: 24px; font-weight: bold; color: #B22222; text-decoration: underline; }
-    .invoice-no-small { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
+    .invoice-preview {{ background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }}
+    .return-preview {{ background-color: white; padding: 25px; border: 2px solid #B22222; border-radius: 10px; color: black; }}
+    .company-header-center {{ text-align: center; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; margin-bottom: 10px; }}
+    .return-header-center {{ text-align: center; border-bottom: 2px double #B22222; padding-bottom: 10px; margin-bottom: 10px; }}
+    .company-name {{ font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }}
+    .company-details {{ font-size: 16px; color: black; line-height: 1.4; }}
+    .invoice-title-section {{ text-align: center; margin: 15px 0; }}
+    .invoice-main-title {{ font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }}
+    .return-main-title {{ font-size: 24px; font-weight: bold; color: #B22222; text-decoration: underline; }}
+    .invoice-no-small {{ font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }}
     
-    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 15px; text-align: center; color: black; }
-    .styled-table th { background-color: #f0f2f6; color: black; padding: 10px; border: 1px solid #000; }
-    .styled-table td { padding: 10px; border: 1px solid #000; }
+    .styled-table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 15px; text-align: center; color: black; }}
+    .styled-table th {{ background-color: #f0f2f6; color: black; padding: 10px; border: 1px solid #000; }}
+    .styled-table td {{ padding: 10px; border: 1px solid #000; }}
     
-    .summary-section { margin-top: 15px; width: 100%; }
-    .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #ddd; }
-    .total-final { background-color: #d4edda; font-size: 22px; font-weight: 800; color: #155724; border: 2px solid #c3e6cb; margin-top: 10px; padding: 10px; text-align: center; }
-    .return-total-final { background-color: #f8d7da; font-size: 22px; font-weight: 800; color: #721c24; border: 2px solid #f5c6cb; margin-top: 10px; padding: 10px; text-align: center; }
+    .summary-section {{ margin-top: 15px; width: 100%; }}
+    .summary-row {{ display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #ddd; }}
+    .total-final {{ background-color: #d4edda; font-size: 22px; font-weight: 800; color: #155724; border: 2px solid #c3e6cb; margin-top: 10px; padding: 10px; text-align: center; }}
+    .return-total-final {{ background-color: #f8d7da; font-size: 22px; font-weight: 800; color: #721c24; border: 2px solid #f5c6cb; margin-top: 10px; padding: 10px; text-align: center; }}
 
-    .receipt-container { background-color: white; padding: 20px; color: black; text-align: center; border: 1px solid #eee; }
-    .receipt-comp-name { font-size: 32px; font-weight: 800; margin-bottom: 5px; }
-    .receipt-comp-addr { font-size: 18px; margin-bottom: 2px; }
-    .receipt-comp-tel { font-size: 18px; margin-bottom: 10px; }
-    .dashed-line { border-top: 2px dashed black; margin: 10px 0; }
-    .receipt-title { font-size: 35px; font-weight: 800; margin: 15px 0; }
-    .receipt-body { font-size: 22px; text-align: right; line-height: 2; margin: 20px 0; }
-    .receipt-footer { font-size: 18px; text-align: left; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
+    .receipt-container {{ background-color: white; padding: 20px; color: black; text-align: center; border: 1px solid #eee; }}
+    .receipt-comp-name {{ font-size: 32px; font-weight: 800; margin-bottom: 5px; }}
+    .receipt-comp-addr {{ font-size: 18px; margin-bottom: 2px; }}
+    .receipt-comp-tel {{ font-size: 18px; margin-bottom: 10px; }}
+    .dashed-line {{ border-top: 2px dashed black; margin: 10px 0; }}
+    .receipt-title {{ font-size: 35px; font-weight: 800; margin: 15px 0; }}
+    .receipt-body {{ font-size: 22px; text-align: right; line-height: 2; margin: 20px 0; }}
+    .receipt-footer {{ font-size: 18px; text-align: left; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -122,8 +124,8 @@ def convert_ar_nav(text):
     return "".join(n_map.get(c, c) for c in text)
 
 # --- الواجهات ---
-# عرض اللوغو في كل الصفحات
-st.markdown(f'<div class="logo-container"><img src="https://i.ibb.co/mF9fP7V/image.png" class="logo-img"></div>', unsafe_allow_html=True)
+# عرض اللوغو الجديد في أعلى كل الصفحات
+st.markdown(f'<div class="logo-container"><img src="{LOGO_URL}" class="logo-img"></div>', unsafe_allow_html=True)
 
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
@@ -152,7 +154,6 @@ elif st.session_state.page == 'home':
 elif st.session_state.page == 'order':
     is_ret = st.session_state.is_return
     if st.session_state.receipt_view:
-        # (نفس منطق الإيصال السابق دون تغيير)
         raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         aft = raw * (1 - h/100)
@@ -266,4 +267,3 @@ elif st.session_state.page == 'order':
             if st.button("🔙 الرئيسية"): st.session_state.page = 'home'; st.rerun()
         with col_r:
             if st.button("🧾 إشعار استلام"): st.session_state.receipt_view = True; st.rerun()
-
