@@ -19,12 +19,12 @@ st.markdown(f"""
     html, body, [class*="css"] {{ font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }}
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] {{ display: none !important; }}
     
-    /* تصغير اللوغو وضبط مكانه في المنتصف */
+    /* تنسيق اللوغو ليكون في المنتصف وبحجم مرتب */
     .logo-container {{
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 10px;
+        padding: 10px 0;
         margin-top: -20px;
     }}
 
@@ -68,7 +68,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات البيانات والوظائف (كما هي دون أي تغيير) ---
+# --- 2. إعدادات البيانات والاتصال ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
@@ -115,7 +115,6 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
 
 USERS = {"عبد الكريم حوراني": "9900", "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 
-# إدارة الحالة الخاصة بالتطبيق
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
@@ -129,12 +128,12 @@ def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# --- 3. عرض اللوغو المصغر ---
+# --- 3. عرض اللوغو في المنتصف ---
 st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-st.image(LOGO_FILE, width=100) # الحجم المصغر
+st.image(LOGO_FILE, width=160)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- الواجهات (نفس كودك الأصلي تماماً) ---
+# --- 4. الواجهات البرمجية ---
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -162,6 +161,7 @@ elif st.session_state.page == 'home':
 elif st.session_state.page == 'order':
     is_ret = st.session_state.is_return
     if st.session_state.receipt_view:
+        # حسابات الإيصال
         raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         aft = raw * (1 - h/100)
