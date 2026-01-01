@@ -4,7 +4,7 @@ import random
 from datetime import datetime
 import requests
 
-# --- 1. إعدادات التنسيق والجمالية (بناءً على طلبك) ---
+# --- 1. إعدادات التنسيق والجمالية ---
 st.set_page_config(page_title="شركة حلباوي إخوان", layout="centered")
 
 st.markdown("""
@@ -21,62 +21,59 @@ st.markdown("""
         body { background-color: white !important; }
     }
 
-    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 16px; text-align: center; }
-    .styled-table th { background-color: #1E3A8A; color: #ffffff; padding: 8px; border: 1px solid #ddd; }
+    /* تنسيق الفاتورة للمعاينة والطباعة */
+    .invoice-preview { 
+        background-color: white; 
+        padding: 20px; 
+        border: 1px solid #eee; 
+        border-radius: 10px; 
+        color: black;
+        box-shadow: 0px 0px 10px rgba(0,0,0,0.05);
+    }
+    .invoice-header { text-align: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }
+    .invoice-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; }
+    
+    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; text-align: center; color: black; }
+    .styled-table th { background-color: #f8f9fa; color: #1E3A8A; padding: 8px; border: 1px solid #ddd; }
     .styled-table td { padding: 8px; border: 1px solid #ddd; }
     
-    .summary-container { border-top: 2px solid #1E3A8A; margin-top: 20px; padding-top: 10px; }
-    .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #eee; }
-    .highlight-blue { color: #1E3A8A; font-weight: bold; font-size: 18px; }
-    .final-total-box { background-color: #d4edda; color: #155724; font-weight: bold; font-size: 20px; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; border: 1px solid #c3e6cb; }
-    
-    .thermal-receipt { width: 100%; max-width: 300px; margin: 0 auto; padding: 10px; border: 1px solid #eee; text-align: center; background: white; }
-    .receipt-header { font-size: 22px; font-weight: 800; margin-bottom: 2px; color: black; }
-    .receipt-sub { font-size: 14px; margin-bottom: 10px; line-height: 1.2; color: black; }
-    .receipt-title { font-size: 20px; font-weight: bold; margin: 15px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0; color: black; }
-    .receipt-body { text-align: right; font-size: 17px; line-height: 1.6; margin-bottom: 20px; color: black; }
-    .receipt-footer { font-size: 14px; border-top: 1px solid #eee; padding-top: 10px; text-align: right; color: black; }
+    .summary-section { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+    .summary-line { display: flex; justify-content: space-between; padding: 3px 0; font-size: 15px; }
+    .total-line { font-weight: bold; font-size: 18px; color: #1E3A8A; margin-top: 5px; border-top: 2px solid #1E3A8A; padding-top: 5px; }
+
+    .thermal-receipt { width: 100%; max-width: 300px; margin: 0 auto; padding: 10px; border: 1px solid #eee; text-align: center; background: white; color: black; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات الربط بالإكسل (الأسعار والبيانات) ---
+# --- 2. إعدادات الربط بالإكسل ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
-GID_PRICES = "339292430"  # صفحة "اسعار"
-GID_DATA = "0"            # صفحة "بيانات المندوبين"
+GID_PRICES = "339292430"
+GID_DATA = "0"
 
-# دالة جلب الرقم التسلسلي التالي
 def get_next_invoice_number():
     try:
         url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_DATA}"
         df = pd.read_csv(url)
         col_name = 'رقم الفاتوره'
         if col_name in df.columns:
-            # تنظيف البيانات وجلب أعلى رقم
             valid_nums = pd.to_numeric(df[col_name], errors='coerce').dropna()
-            if not valid_nums.empty:
-                return str(int(valid_nums.max()) + 1)
+            if not valid_nums.empty: return str(int(valid_nums.max()) + 1)
         return "1001"
-    except:
-        return str(random.randint(10000, 99999))
+    except: return str(random.randint(10000, 99999))
 
-# دالة جلب الأصناف من صفحة "اسعار"
 @st.cache_data(ttl=60)
 def load_products_from_excel():
     try:
         url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID_PRICES}"
         df_p = pd.read_csv(url)
-        # تنظيف أسماء الأعمدة (الاسم، السعر)
         df_p.columns = [c.strip() for c in df_p.columns]
-        # دعم كتابة "الاسم" أو "الإسم"
         name_col = [c for c in df_p.columns if 'الاسم' in c or 'الإسم' in c][0]
         price_col = [c for c in df_p.columns if 'السعر' in c][0]
         return pd.Series(df_p[price_col].values, index=df_p[name_col]).to_dict()
-    except:
-        return {"⚠️ خطأ في تحميل الأصناف": 0.0}
+    except: return {"⚠️ خطأ في تحميل الأصناف": 0.0}
 
 PRODUCTS = load_products_from_excel()
 
-# --- 3. دالة الإرسال لـ Google Sheets ---
 def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time):
     url = "https://script.google.com/macros/s/AKfycbzi3kmbVyg_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
     data = {"vat_value": vat, "total_before": total_pre, "invoice_no": inv_no, "cust_name": customer, "rep_name": representative, "date_full": date_time}
@@ -87,7 +84,6 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
 
 USERS = {"محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 
-# إعداد الحالة (Session State)
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
@@ -115,45 +111,24 @@ elif st.session_state.page == 'home':
     st.markdown(f'<div style="text-align:center;"><h3>أهلاً {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:20px;">ببركة الصلاة على محمد وال محمد</p></div>', unsafe_allow_html=True)
     if st.button("📝 تسجيل فاتورة جديدة", use_container_width=True, type="primary"):
         st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view, st.session_state.is_sent = 'order', [], False, False, False
-        # جلب الرقم التسلسلي الحقيقي
         st.session_state.inv_no = get_next_invoice_number()
         st.rerun()
 
 elif st.session_state.page == 'order':
-    
     if st.session_state.receipt_view:
-        # واجهة الإيصال الحراري
+        # واجهة إشعار الاستلام (كما هي)
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         total_after_disc = raw_total * (1 - h_val/100)
         total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
         final_net = total_after_disc + total_vat
         cust_name = st.session_state.get('last_cust', '..........')
-        
-        st.markdown(f"""
-            <div class="thermal-receipt">
-                <div class="receipt-header">شركة حلباوي إخوان ش.م.م</div>
-                <div class="receipt-sub">بيروت - الرويس<br>01/556058 - 03/220893</div>
-                <div class="receipt-title">إشعار بالاستلام</div>
-                <div class="receipt-body">
-                    وصلنا من السيد: <b>{cust_name}</b><br>
-                    مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>
-                    وذلك عن فاتورة رقم: #{st.session_state.inv_no}
-                </div>
-                <div class="receipt-footer">
-                    التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>
-                    المندوب: {st.session_state.user_name}
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("🖨️ طباعة الإيصال", use_container_width=True):
-            st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-        if st.button("🔙 العودة للفاتورة", use_container_width=True):
-            st.session_state.receipt_view = False
-            st.rerun()
+        st.markdown(f'<div class="thermal-receipt"><div class="receipt-header">شركة حلباوي إخوان ش.م.م</div><div class="receipt-sub">بيروت - الرويس<br>01/556058</div><div class="receipt-title">إشعار بالاستلام</div><div class="receipt-body">وصلنا من السيد: <b>{cust_name}</b><br>مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>وذلك عن فاتورة رقم: #{st.session_state.inv_no}</div><div class="receipt-footer">التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>المندوب: {st.session_state.user_name}</div></div>', unsafe_allow_html=True)
+        if st.button("🖨️ طباعة الإيصال", use_container_width=True): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
+        if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
 
     else:
+        # واجهة إدخال الفاتورة
         st.markdown(f'<h2 class="no-print" style="text-align:center; color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2>', unsafe_allow_html=True)
         col_c1, col_c2 = st.columns(2)
         with col_c1: cust = st.text_input("اسم الزبون (المحل)", key="cust_input")
@@ -176,60 +151,63 @@ elif st.session_state.page == 'order':
                     st.session_state.confirmed, st.session_state.clear_counter = False, st.session_state.clear_counter + 1
                     st.rerun()
         with col_btn2:
-            if st.button("✅ تثبيت الفاتورة", use_container_width=True, type="primary"): st.session_state.confirmed = True
+            if st.button("👁️ معاينة وتثبيت", use_container_width=True, type="primary"): st.session_state.confirmed = True
 
         if st.session_state.confirmed and st.session_state.temp_items:
-            st.markdown("<hr class='no-print'>", unsafe_allow_html=True)
-            st.markdown(f"""
-                <div style="text-align: center;"><h2 style="color:#1E3A8A;">رقم الفاتورة: {st.session_state.inv_no}</h2></div>
-                <div style="text-align: right; margin-bottom: 20px;">
-                    <div style="font-size: 26px; font-weight: bold; color: #1E3A8A;">الزبون: {cust}</div>
-                    <div style="font-size: 16px; margin-top: 5px;">التاريخ: {datetime.now().strftime("%Y-%m-%d")}</div>
-                    <div style="font-size: 16px; margin-top: 5px; color: #555;">المندوب: {st.session_state.user_name}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
+            # --- معاينة الفاتورة بشكل احترافي ---
             h_val = float(convert_ar_nav(disc_input)) if disc_input else 0
             raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
             discount_amt = raw_total * (h_val / 100)
             total_after_disc = raw_total - discount_amt
             total_vat = 0
-            table_html = '<table class="styled-table"><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>VAT</th><th>الإجمالي</th></tr>'
+            
+            items_rows = ""
             for item in st.session_state.temp_items:
                 line_total = item["العدد"] * item["السعر"]
                 line_vat = (line_total * (1 - h_val/100)) * 0.11 if "*" in item["الصنف"] else 0
                 total_vat += line_vat
-                table_html += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
-            table_html += '</table>'
-            st.markdown(table_html, unsafe_allow_html=True)
+                items_rows += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
+            
             final_net = total_after_disc + total_vat
 
             st.markdown(f"""
-                <div class="summary-container">
-                    <div class="summary-row"><span>المجموع:</span><span>${raw_total:,.2f}</span></div>
-                    <div class="summary-row"><span>الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
-                    <div class="summary-row highlight-blue"><span>المجموع بعد الحسم:</span><span>${total_after_disc:,.2f}</span></div>
-                    <div class="summary-row"><span>الضريبة 11%:</span><span>+${total_vat:,.2f}</span></div>
-                    <div class="final-total-box">المجموع الصافي: ${final_net:,.2f}</div>
+                <div class="invoice-preview">
+                    <div class="invoice-header">
+                        <h2 style="margin:0; color:#1E3A8A;">فاتورة مبيعات</h2>
+                        <div style="font-size:18px;">شركة حلباوي إخوان</div>
+                    </div>
+                    <div class="invoice-info">
+                        <div><b>الزبون:</b> {cust}</div>
+                        <div><b>الرقم:</b> #{st.session_state.inv_no}<br><b>التاريخ:</b> {datetime.now().strftime("%Y-%m-%d")}</div>
+                    </div>
+                    <table class="styled-table">
+                        <tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>VAT</th><th>الإجمالي</th></tr>
+                        {items_rows}
+                    </table>
+                    <div class="summary-section">
+                        <div class="summary-line"><span>المجموع:</span><span>${raw_total:,.2f}</span></div>
+                        <div class="summary-line"><span>الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
+                        <div class="summary-line"><span>الضريبة (11%):</span><span>+${total_vat:,.2f}</span></div>
+                        <div class="total-line"><span>الإجمالي الصافي:</span><span>${final_net:,.2f}</span></div>
+                    </div>
+                    <div style="margin-top:10px; font-size:12px; color:#777; text-align:left;">المندوب: {st.session_state.user_name}</div>
                 </div>
             """, unsafe_allow_html=True)
             
             col_s, col_p = st.columns(2)
             with col_s:
-                if st.button("💾 حفظ وإرسال", use_container_width=True):
+                if st.button("💾 حفظ وإرسال للشركة", use_container_width=True):
                     if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
                         st.session_state.is_sent = True
-                        st.success("✅ تم الحفظ والإرسال بنجاح!")
+                        st.success("✅ تم الحفظ بنجاح!")
                         st.rerun()
             with col_p:
-                if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
+                if st.button("🖨️ طباعة الفاتورة الآن", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
         st.divider()
         col_back, col_rec = st.columns(2)
         with col_back:
-            if st.button("🔙 عودة للرئيسية", use_container_width=True):
-                st.session_state.page = 'home'; st.rerun()
+            if st.button("🔙 عودة للرئيسية", use_container_width=True): st.session_state.page = 'home'; st.rerun()
         with col_rec:
-            if st.button("🧾 طباعة إشعار استلام", use_container_width=True):
-                st.session_state.receipt_view = True; st.rerun()
+            if st.button("🧾 إشعار استلام مبلغ", use_container_width=True): st.session_state.receipt_view = True; st.rerun()
