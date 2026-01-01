@@ -14,6 +14,7 @@ st.markdown("""
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] { display: none !important; }
     
     .header-box { background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
+    .return-header-box { background-color: #B22222; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}
     
     @media print {
         .no-print { display: none !important; }
@@ -22,11 +23,14 @@ st.markdown("""
     }
 
     .invoice-preview { background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }
+    .return-preview { background-color: white; padding: 25px; border: 2px solid #B22222; border-radius: 10px; color: black; }
     .company-header-center { text-align: center; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; margin-bottom: 10px; }
+    .return-header-center { text-align: center; border-bottom: 2px double #B22222; padding-bottom: 10px; margin-bottom: 10px; }
     .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
     .company-details { font-size: 16px; color: black; line-height: 1.4; }
     .invoice-title-section { text-align: center; margin: 15px 0; }
     .invoice-main-title { font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }
+    .return-main-title { font-size: 24px; font-weight: bold; color: #B22222; text-decoration: underline; }
     .invoice-no-small { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
     
     .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 15px; text-align: center; color: black; }
@@ -36,6 +40,7 @@ st.markdown("""
     .summary-section { margin-top: 15px; width: 100%; }
     .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #ddd; }
     .total-final { background-color: #d4edda; font-size: 22px; font-weight: 800; color: #155724; border: 2px solid #c3e6cb; margin-top: 10px; padding: 10px; text-align: center; }
+    .return-total-final { background-color: #f8d7da; font-size: 22px; font-weight: 800; color: #721c24; border: 2px solid #f5c6cb; margin-top: 10px; padding: 10px; text-align: center; }
 
     .receipt-container { background-color: white; padding: 20px; color: black; text-align: center; border: 1px solid #eee; }
     .receipt-comp-name { font-size: 32px; font-weight: 800; margin-bottom: 5px; }
@@ -84,9 +89,10 @@ def load_products_from_excel():
 
 PRODUCTS = load_products_from_excel()
 
-def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time):
-    url = "https://script.google.com/macros/s/AKfycbzi3kmbVyg_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
-    data = {"vat_value": vat, "total_before": total_pre, "invoice_no": inv_no, "cust_name": customer, "rep_name": representative, "date_full": date_time}
+def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date_time, is_ret=False):
+    url = "https://script.google.com/macros/s/AKfycbzi3kmbVyb_MV1Nyb7FwsQpCeneGVGSJKLMpv2YXBJR05v8Y77-Ub2SpvViZWCCp1nyqA/exec"
+    prefix = "(مرتجع) " if is_ret else ""
+    data = {"vat_value": vat, "total_before": total_pre, "invoice_no": inv_no, "cust_name": f"{prefix}{customer}", "rep_name": representative, "date_full": date_time}
     try:
         requests.post(url, data=data, timeout=10)
         return True
@@ -100,6 +106,7 @@ if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'confirmed' not in st.session_state: st.session_state.confirmed = False
 if 'receipt_view' not in st.session_state: st.session_state.receipt_view = False
 if 'is_sent' not in st.session_state: st.session_state.is_sent = False
+if 'is_return' not in st.session_state: st.session_state.is_return = False
 if 'widget_id' not in st.session_state: st.session_state.widget_id = 0
 
 def convert_ar_nav(text):
@@ -119,12 +126,20 @@ if not st.session_state.logged_in:
 elif st.session_state.page == 'home':
     st.markdown('<div class="header-box"><h2>شركة حلباوي إخوان</h2></div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;"><h3>أهلاً بك سيد {st.session_state.user_name}</h3><p style="color:green; font-weight:bold; font-size:22px;">ببركة الصلاة على محمد وآل محمد</p></div>', unsafe_allow_html=True)
-    if st.button("📝 تسجيل فاتورة جديدة", use_container_width=True, type="primary"):
-        st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view, st.session_state.is_sent = 'order', [], False, False, False
-        st.session_state.inv_no = get_next_invoice_number()
-        st.rerun()
+    col_inv, col_ret = st.columns(2)
+    with col_inv:
+        if st.button("📝 فاتورة جديدة", use_container_width=True, type="primary"):
+            st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view, st.session_state.is_sent, st.session_state.is_return = 'order', [], False, False, False, False
+            st.session_state.inv_no = get_next_invoice_number()
+            st.rerun()
+    with col_ret:
+        if st.button("🔄 تسجيل مرتجع", use_container_width=True):
+            st.session_state.page, st.session_state.temp_items, st.session_state.confirmed, st.session_state.receipt_view, st.session_state.is_sent, st.session_state.is_return = 'order', [], False, False, False, True
+            st.session_state.inv_no = get_next_invoice_number()
+            st.rerun()
 
 elif st.session_state.page == 'order':
+    is_ret = st.session_state.is_return
     if st.session_state.receipt_view:
         raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
@@ -138,42 +153,34 @@ elif st.session_state.page == 'order':
                 <div class="receipt-comp-addr">بيروت - الرويس</div>
                 <div class="receipt-comp-tel">03/220893 - 01/556058</div>
                 <div class="dashed-line"></div>
-                <div class="receipt-title">إشعار بالاستلام</div>
+                <div class="receipt-title">{"إشعار مرتجع" if is_ret else "إشعار بالاستلام"}</div>
                 <div class="dashed-line"></div>
                 <div class="receipt-body">
-                    وصلنا من السيد: {c_n}<br>
+                    السيد: {c_n}<br>
                     مبلغ وقدره: <span style="font-weight:800;">{net:,.2f}$</span><br>
-                    وذلك عن فاتورة رقم: #{st.session_state.inv_no}
+                    عن فاتورة رقم: #{st.session_state.inv_no}
                 </div>
-                <div class="receipt-footer">
-                    التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>
-                    المندوب: {st.session_state.user_name}
-                </div>
+                <div class="receipt-footer">التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>المندوب: {st.session_state.user_name}</div>
             </div>
         """, unsafe_allow_html=True)
         if st.button("🖨️ طباعة الإيصال", use_container_width=True): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
         if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
     
     else:
-        st.markdown(f'<h2 class="no-print" style="text-align:center;">فاتورة رقم #{st.session_state.inv_no}</h2>', unsafe_allow_html=True)
+        title = "مرتجع مبيعات" if is_ret else "فاتورة مبيعات"
+        st.markdown(f'<h2 class="no-print" style="text-align:center; color:{"#B22222" if is_ret else "#1E3A8A"};">{title} رقم #{st.session_state.inv_no}</h2>', unsafe_allow_html=True)
         cust_dict = load_rep_customers(st.session_state.user_name)
         col1, col2 = st.columns(2)
         with col1:
             search_c = st.text_input("🔍 ابحث عن زبون...")
             f_c = [k for k in cust_dict.keys() if search_c in k] if search_c else list(cust_dict.keys())
             sel_c = st.selectbox("اختر الزبون", ["-- اختر --", "➕ زبون جديد (كتابة يدوية)"] + f_c)
-            
-            if sel_c == "➕ زبون جديد (كتابة يدوية)":
-                cust = st.text_input("اكتب اسم الزبون الجديد هنا")
-            else:
-                cust = cust_dict.get(sel_c, sel_c if sel_c != "-- اختر --" else "")
-                
+            cust = st.text_input("اكتب اسم الزبون الجديد هنا") if sel_c == "➕ زبون جديد (كتابة يدوية)" else cust_dict.get(sel_c, sel_c if sel_c != "-- اختر --" else "")
         with col2:
             disc_input = st.text_input("الحسم %", value="0")
 
         st.session_state.last_cust, st.session_state.last_disc = cust, disc_input
         st.divider()
-        
         wid = st.session_state.widget_id
         search_p = st.text_input("🔍 ابحث عن صنف...", key=f"s_{wid}")
         f_p = [p for p in PRODUCTS.keys() if search_p in p] if search_p else list(PRODUCTS.keys())
@@ -193,26 +200,23 @@ elif st.session_state.page == 'order':
             raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
             dis_a = raw * (h/100)
             aft = raw - dis_a
-            
-            rows_html = ""
-            total_vat = 0
+            rows_html, total_vat = "", 0
             for itm in st.session_state.temp_items:
                 line_total = itm["العدد"] * itm["السعر"]
                 line_vat = (line_total * (1 - h/100)) * 0.11 if "*" in itm["الصنف"] else 0
                 total_vat += line_vat
                 rows_html += f'<tr><td>{itm["الصنف"]}</td><td>{itm["العدد"]}</td><td>{itm["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
-
             net = aft + total_vat
 
             st.markdown(f"""
-                <div class="invoice-preview">
-                    <div class="company-header-center">
+                <div class="{"return-preview" if is_ret else "invoice-preview"}">
+                    <div class="{"return-header-center" if is_ret else "company-header-center"}">
                         <div class="company-name">شركة حلباوي إخوان ش.م.م</div>
                         <div class="company-details">بيروت - الرويس | 03/220893 - 01/556058</div>
                     </div>
                     <div class="invoice-title-section">
-                        <div class="invoice-main-title">فاتورة مبيعات</div>
-                        <div class="invoice-no-small">رقم الفاتورة: #{st.session_state.inv_no}</div>
+                        <div class="{"return-main-title" if is_ret else "invoice-main-title"}">{title}</div>
+                        <div class="invoice-no-small">رقم: #{st.session_state.inv_no}</div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px;">
                         <div>الزبون: {cust}</div>
@@ -225,17 +229,20 @@ elif st.session_state.page == 'order':
                     <div class="summary-section">
                         <div class="summary-row"><span>المجموع:</span><span>${raw:,.2f}</span></div>
                         <div class="summary-row"><span>الحسم ({h}%):</span><span>-${dis_a:,.2f}</span></div>
-                        <div class="summary-row" style="font-weight:bold; color:#1E3A8A;"><span>المجموع بعد الحسم:</span><span>${aft:,.2f}</span></div>
-                        <div class="summary-row"><span>الضريبة (VAT 11%):</span><span>+${total_vat:,.2f}</span></div>
-                        <div class="total-final">الإجمالي الصافي: ${net:,.2f}</div>
+                        <div class="summary-row" style="font-weight:bold; color:{"#B22222" if is_ret else "#1E3A8A"};"><span>بعد الحسم:</span><span>${aft:,.2f}</span></div>
+                        <div class="summary-row"><span>VAT 11%:</span><span>+${total_vat:,.2f}</span></div>
+                        <div class="{"return-total-final" if is_ret else "total-final"}">الإجمالي الصافي: ${net:,.2f}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
             
             if st.button("💾 حفظ وإرسال", use_container_width=True):
-                if send_to_google_sheets(f"{total_vat:.2f}", f"{raw:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
+                # إذا كان مرتجع، نرسل القيم سالبة للجداول
+                val_vat = f"-{total_vat:.2f}" if is_ret else f"{total_vat:.2f}"
+                val_raw = f"-{raw:.2f}" if is_ret else f"{raw:.2f}"
+                if send_to_google_sheets(val_vat, val_raw, st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M"), is_ret):
                     st.session_state.is_sent = True; st.success("✅ تم الحفظ")
-            if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
+            if st.button("🖨️ طباعة", use_container_width=True, disabled=not st.session_state.is_sent):
                 st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
 
         st.divider()
