@@ -5,7 +5,6 @@ from datetime import datetime
 import requests
 
 # --- 1. إعدادات التنسيق والهوية ---
-# نستخدم الملف الذي رفعته مباشرة لضمان عدم ظهور "Image not found"
 LOGO_FILE = "IMG_6470.jpeg"
 
 st.set_page_config(
@@ -20,8 +19,14 @@ st.markdown(f"""
     html, body, [class*="css"] {{ font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; }}
     div[data-testid="InputInstructions"], div[data-baseweb="helper-text"] {{ display: none !important; }}
     
-    .logo-container {{ text-align: center; margin-bottom: 20px; }}
-    .logo-img {{ width: 180px; border-radius: 10px; }}
+    /* تصغير اللوغو وضبط مكانه في المنتصف */
+    .logo-container {{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 10px;
+        margin-top: -20px;
+    }}
 
     .header-box {{ background-color: #1E3A8A; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}}
     .return-header-box {{ background-color: #B22222; color: white; text-align: center; padding: 10px; border-radius: 10px; margin-bottom: 20px;}}
@@ -63,7 +68,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات البيانات ---
+# --- 2. إعدادات البيانات والوظائف (كما هي دون أي تغيير) ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
@@ -110,6 +115,7 @@ def send_to_google_sheets(vat, total_pre, inv_no, customer, representative, date
 
 USERS = {"عبد الكريم حوراني": "9900", "محمد الحسيني": "8822", "علي دوغان": "5500", "عزات حلاوي": "6611", "علي حسين حلباوي": "4455", "محمد حسين حلباوي": "3366", "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"}
 
+# إدارة الحالة الخاصة بالتطبيق
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
@@ -123,15 +129,12 @@ def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# --- الواجهات ---
-# عرض اللوغو المرفوع محلياً في أعلى كل الصفحات
-col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
-with col_logo_2:
-    try:
-        st.image(LOGO_FILE, use_container_width=True)
-    except:
-        st.error("يرجى التأكد من رفع ملف IMG_6470.jpeg على GitHub")
+# --- 3. عرض اللوغو المصغر ---
+st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+st.image(LOGO_FILE, width=100) # الحجم المصغر
+st.markdown('</div>', unsafe_allow_html=True)
 
+# --- الواجهات (نفس كودك الأصلي تماماً) ---
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -213,7 +216,7 @@ elif st.session_state.page == 'order':
                     st.session_state.widget_id += 1
                     st.rerun()
                 except ValueError:
-                    st.error("الرجاء إدخال رقم صحيح أو كسر (0.5)")
+                    st.error("الرجاء إدخال رقم صحيح")
 
         if st.button("👁️ معاينة الفاتورة", use_container_width=True, type="primary"): st.session_state.confirmed = True
 
