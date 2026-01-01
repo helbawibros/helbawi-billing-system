@@ -29,9 +29,9 @@ st.markdown("""
     .invoice-main-title { font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }
     .invoice-no-small { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
     
-    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 15px; text-align: center; color: black; }
-    .styled-table th { background-color: #f0f2f6; color: black; padding: 10px; border: 1px solid #000; }
-    .styled-table td { padding: 10px; border: 1px solid #000; }
+    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; text-align: center; color: black; }
+    .styled-table th { background-color: #f0f2f6; color: black; padding: 8px; border: 1px solid #000; }
+    .styled-table td { padding: 8px; border: 1px solid #000; }
     
     .summary-section { margin-top: 15px; width: 100%; }
     .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #ddd; }
@@ -39,16 +39,13 @@ st.markdown("""
 
     .receipt-container { background-color: white; padding: 20px; color: black; text-align: center; border: 1px solid #eee; }
     .receipt-comp-name { font-size: 32px; font-weight: 800; margin-bottom: 5px; }
-    .receipt-comp-addr { font-size: 18px; margin-bottom: 2px; }
-    .receipt-comp-tel { font-size: 18px; margin-bottom: 10px; }
-    .dashed-line { border-top: 2px dashed black; margin: 10px 0; }
     .receipt-title { font-size: 35px; font-weight: 800; margin: 15px 0; }
+    .dashed-line { border-top: 2px dashed black; margin: 10px 0; }
     .receipt-body { font-size: 22px; text-align: right; line-height: 2; margin: 20px 0; }
-    .receipt-footer { font-size: 18px; text-align: left; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات البيانات ---
+# --- 2. إعدادات البيانات والربط ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
@@ -126,6 +123,7 @@ elif st.session_state.page == 'home':
 
 elif st.session_state.page == 'order':
     if st.session_state.receipt_view:
+        # حسابات الإيصال
         raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         aft = raw * (1 - h/100)
@@ -135,8 +133,7 @@ elif st.session_state.page == 'order':
         st.markdown(f"""
             <div class="receipt-container">
                 <div class="receipt-comp-name">شركة حلباوي إخوان ش.م.م</div>
-                <div class="receipt-comp-addr">بيروت - الرويس</div>
-                <div class="receipt-comp-tel">03/220893 - 01/556058</div>
+                <div class="receipt-comp-addr">بيروت - الرويس | 03/220893 - 01/556058</div>
                 <div class="dashed-line"></div>
                 <div class="receipt-title">إشعار بالاستلام</div>
                 <div class="dashed-line"></div>
@@ -145,7 +142,7 @@ elif st.session_state.page == 'order':
                     مبلغ وقدره: <span style="font-weight:800;">{net:,.2f}$</span><br>
                     وذلك عن فاتورة رقم: #{st.session_state.inv_no}
                 </div>
-                <div class="receipt-footer">
+                <div style="text-align:left; font-size:18px; margin-top:30px;">
                     التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>
                     المندوب: {st.session_state.user_name}
                 </div>
@@ -185,11 +182,30 @@ elif st.session_state.page == 'order':
 
         if st.session_state.confirmed and st.session_state.temp_items:
             h = float(convert_ar_nav(disc_input))
-            raw = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
-            dis_a = raw * (h/100)
-            aft = raw - dis_a
-            vat = sum(((i["العدد"] * i["السعر"]) * (1 - h/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
-            net = aft + vat
+            # إنشاء سطور الجدول مع خانة الـ VAT لكل صنف
+            table_rows = ""
+            total_raw = 0
+            total_vat = 0
+            
+            for item in st.session_state.temp_items:
+                line_total = item["العدد"] * item["السعر"]
+                # الضريبة تحسب بعد الحسم لكل صنف إذا كان الصنف يحمل علامة *
+                item_vat = (line_total * (1 - h/100)) * 0.11 if "*" in item["الصنف"] else 0
+                table_rows += f"""
+                    <tr>
+                        <td>{item["الصنف"]}</td>
+                        <td>{item["العدد"]}</td>
+                        <td>{item["السعر"]:.2f}</td>
+                        <td>{item_vat:.2f}</td>
+                        <td>{line_total:.2f}</td>
+                    </tr>
+                """
+                total_raw += line_total
+                total_vat += item_vat
+
+            dis_a = total_raw * (h/100)
+            aft = total_raw - dis_a
+            net = aft + total_vat
 
             st.markdown(f"""
                 <div class="invoice-preview">
@@ -201,23 +217,24 @@ elif st.session_state.page == 'order':
                         <div class="invoice-main-title">فاتورة مبيعات</div>
                         <div class="invoice-no-small">رقم الفاتورة: #{st.session_state.inv_no}</div>
                     </div>
-                    <div style="text-align:right; font-weight:bold;">الزبون: {cust} | التاريخ: {datetime.now().strftime("%Y-%m-%d")} | المندوب: {st.session_state.user_name}</div>
+                    <div style="text-align:right; font-weight:bold; margin-bottom:5px;">الزبون: {cust} | التاريخ: {datetime.now().strftime("%Y-%m-%d")}</div>
                     <table class="styled-table">
-                        <tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr>
-                        {"".join([f'<tr><td>{x["الصنف"]}</td><td>{x["العدد"]}</td><td>{x["السعر"]:.2f}</td><td>{x["العدد"]*x["السعر"]:.2f}</td></tr>' for x in st.session_state.temp_items])}
+                        <tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>VAT</th><th>الإجمالي</th></tr>
+                        {table_rows}
                     </table>
                     <div class="summary-section">
-                        <div class="summary-row"><span>المجموع:</span><span>${raw:,.2f}</span></div>
+                        <div class="summary-row"><span>المجموع الأساسي:</span><span>${total_raw:,.2f}</span></div>
                         <div class="summary-row"><span>الحسم ({h}%):</span><span>-${dis_a:,.2f}</span></div>
-                        <div class="summary-row" style="font-weight:bold; color:#1E3A8A;"><span>المجموع بعد الحسم:</span><span>${aft:,.2f}</span></div>
-                        <div class="summary-row"><span>الضريبة (VAT 11%):</span><span>+${vat:,.2f}</span></div>
+                        <div class="summary-row"><span>المجموع بعد الحسم:</span><span>${aft:,.2f}</span></div>
+                        <div class="summary-row"><span>إجمالي الضريبة (VAT):</span><span>+${total_vat:,.2f}</span></div>
                         <div class="total-final">الإجمالي الصافي: ${net:,.2f}</div>
                     </div>
+                    <div style="text-align:left; font-size:12px; margin-top:10px;">المندوب: {st.session_state.user_name}</div>
                 </div>
             """, unsafe_allow_html=True)
             
             if st.button("💾 حفظ وإرسال", use_container_width=True):
-                if send_to_google_sheets(f"{vat:.2f}", f"{raw:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
+                if send_to_google_sheets(f"{total_vat:.2f}", f"{total_raw:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
                     st.session_state.is_sent = True; st.success("✅ تم الحفظ")
             if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                 st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
