@@ -24,22 +24,25 @@ st.markdown("""
     /* تنسيق الفاتورة للمعاينة والطباعة */
     .invoice-preview { 
         background-color: white; 
-        padding: 20px; 
-        border: 1px solid #eee; 
+        padding: 25px; 
+        border: 2px solid #1E3A8A; 
         border-radius: 10px; 
         color: black;
-        box-shadow: 0px 0px 10px rgba(0,0,0,0.05);
     }
-    .invoice-header { text-align: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }
-    .invoice-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; }
+    .company-header { text-align: center; margin-bottom: 20px; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; }
+    .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
+    .company-details { font-size: 16px; color: black; line-height: 1.4; }
+    .invoice-title { font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 15px 0; text-decoration: underline; }
     
-    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; text-align: center; color: black; }
-    .styled-table th { background-color: #f8f9fa; color: #1E3A8A; padding: 8px; border: 1px solid #ddd; }
-    .styled-table td { padding: 8px; border: 1px solid #ddd; }
+    .invoice-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
     
-    .summary-section { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-    .summary-line { display: flex; justify-content: space-between; padding: 3px 0; font-size: 15px; }
-    .total-line { font-weight: bold; font-size: 18px; color: #1E3A8A; margin-top: 5px; border-top: 2px solid #1E3A8A; padding-top: 5px; }
+    .styled-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 15px; text-align: center; color: black; }
+    .styled-table th { background-color: #f0f2f6; color: black; padding: 10px; border: 1px solid #000; }
+    .styled-table td { padding: 10px; border: 1px solid #000; }
+    
+    .summary-section { margin-top: 15px; width: 100%; }
+    .summary-row { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 16px; border-bottom: 1px solid #ddd; }
+    .total-final { background-color: #d4edda; font-size: 22px; font-weight: 800; color: #155724; border: 2px solid #c3e6cb; margin-top: 10px; padding: 10px; text-align: center; }
 
     .thermal-receipt { width: 100%; max-width: 300px; margin: 0 auto; padding: 10px; border: 1px solid #eee; text-align: center; background: white; color: black; }
     </style>
@@ -116,14 +119,14 @@ elif st.session_state.page == 'home':
 
 elif st.session_state.page == 'order':
     if st.session_state.receipt_view:
-        # واجهة إشعار الاستلام (كما هي)
+        # واجهة إشعار الاستلام
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         total_after_disc = raw_total * (1 - h_val/100)
         total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
         final_net = total_after_disc + total_vat
         cust_name = st.session_state.get('last_cust', '..........')
-        st.markdown(f'<div class="thermal-receipt"><div class="receipt-header">شركة حلباوي إخوان ش.م.م</div><div class="receipt-sub">بيروت - الرويس<br>01/556058</div><div class="receipt-title">إشعار بالاستلام</div><div class="receipt-body">وصلنا من السيد: <b>{cust_name}</b><br>مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>وذلك عن فاتورة رقم: #{st.session_state.inv_no}</div><div class="receipt-footer">التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>المندوب: {st.session_state.user_name}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="thermal-receipt"><div class="receipt-header">شركة حلباوي إخوان ش.م.م</div><div class="receipt-sub">لبنان - بيروت - الرويس<br>01/556058</div><div class="receipt-title">إشعار بالاستلام</div><div class="receipt-body">وصلنا من السيد: <b>{cust_name}</b><br>مبلغ وقدره: <b style="font-size: 20px;">${final_net:,.2f}</b><br>وذلك عن فاتورة رقم: #{st.session_state.inv_no}</div><div class="receipt-footer">التاريخ: {datetime.now().strftime("%Y-%m-%d | %H:%M")}<br>المندوب: {st.session_state.user_name}</div></div>', unsafe_allow_html=True)
         if st.button("🖨️ طباعة الإيصال", use_container_width=True): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
         if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
 
@@ -154,43 +157,43 @@ elif st.session_state.page == 'order':
             if st.button("👁️ معاينة وتثبيت", use_container_width=True, type="primary"): st.session_state.confirmed = True
 
         if st.session_state.confirmed and st.session_state.temp_items:
-            # --- معاينة الفاتورة بشكل احترافي ---
+            # --- حسابات المحاسبة الدقيقة ---
             h_val = float(convert_ar_nav(disc_input)) if disc_input else 0
             raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
             discount_amt = raw_total * (h_val / 100)
             total_after_disc = raw_total - discount_amt
-            total_vat = 0
+            
+            # حساب الضريبة على المبلغ بعد الحسم للأصناف الخاضعة فقط (التي تحتوي على *)
+            total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
+            final_net = total_after_disc + total_vat
             
             items_rows = ""
             for item in st.session_state.temp_items:
                 line_total = item["العدد"] * item["السعر"]
-                line_vat = (line_total * (1 - h_val/100)) * 0.11 if "*" in item["الصنف"] else 0
-                total_vat += line_vat
-                items_rows += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_vat:.2f}</td><td>{line_total:.2f}</td></tr>'
-            
-            final_net = total_after_disc + total_vat
+                items_rows += f'<tr><td>{item["الصنف"]}</td><td>{item["العدد"]}</td><td>{item["السعر"]:.2f}</td><td>{line_total:.2f}</td></tr>'
 
             st.markdown(f"""
                 <div class="invoice-preview">
-                    <div class="invoice-header">
-                        <h2 style="margin:0; color:#1E3A8A;">فاتورة مبيعات</h2>
-                        <div style="font-size:18px;">شركة حلباوي إخوان</div>
+                    <div class="company-header">
+                        <div class="company-name">شركة حلباوي إخوان ش.م.م</div>
+                        <div class="company-details">لبنان - بيروت - الرويس<br>هاتف: 01/556058</div>
+                        <div class="invoice-title">فاتورة مبيعات</div>
                     </div>
                     <div class="invoice-info">
-                        <div><b>الزبون:</b> {cust}</div>
-                        <div><b>الرقم:</b> #{st.session_state.inv_no}<br><b>التاريخ:</b> {datetime.now().strftime("%Y-%m-%d")}</div>
+                        <div>الزبون: {cust}</div>
+                        <div>الرقم: #{st.session_state.inv_no}<br>التاريخ: {datetime.now().strftime("%Y-%m-%d")}</div>
                     </div>
                     <table class="styled-table">
-                        <tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>VAT</th><th>الإجمالي</th></tr>
+                        <tr><th>الصنف</th><th>العدد</th><th>السعر الإفرادي</th><th>الإجمالي</th></tr>
                         {items_rows}
                     </table>
                     <div class="summary-section">
-                        <div class="summary-line"><span>المجموع:</span><span>${raw_total:,.2f}</span></div>
-                        <div class="summary-line"><span>الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
-                        <div class="summary-line"><span>الضريبة (11%):</span><span>+${total_vat:,.2f}</span></div>
-                        <div class="total-line"><span>الإجمالي الصافي:</span><span>${final_net:,.2f}</span></div>
+                        <div class="summary-row"><span>المجموع:</span><span>${raw_total:,.2f}</span></div>
+                        <div class="summary-row"><span>الحسم ({h_val}%):</span><span>-${discount_amt:,.2f}</span></div>
+                        <div class="summary-row" style="font-weight:bold;"><span>المجموع بعد الحسم:</span><span>${total_after_disc:,.2f}</span></div>
+                        <div class="summary-row"><span>الضريبة (VAT 11%):</span><span>+${total_vat:,.2f}</span></div>
+                        <div class="total-final">الإجمالي الصافي: ${final_net:,.2f}</div>
                     </div>
-                    <div style="margin-top:10px; font-size:12px; color:#777; text-align:left;">المندوب: {st.session_state.user_name}</div>
                 </div>
             """, unsafe_allow_html=True)
             
