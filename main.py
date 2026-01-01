@@ -23,7 +23,7 @@ st.markdown("""
 
     .invoice-preview { background-color: white; padding: 25px; border: 2px solid #1E3A8A; border-radius: 10px; color: black; }
     
-    /* توسيط اسم الشركة */
+    /* تنسيق الهيدر: اسم الشركة في المنتصف */
     .company-header-center { text-align: center; border-bottom: 2px double #1E3A8A; padding-bottom: 10px; margin-bottom: 10px; }
     .company-name { font-size: 28px; font-weight: 800; color: black; margin-bottom: 5px; }
     .company-details { font-size: 16px; color: black; line-height: 1.4; }
@@ -33,7 +33,6 @@ st.markdown("""
     .invoice-main-title { font-size: 24px; font-weight: bold; color: #1E3A8A; text-decoration: underline; }
     .invoice-no-small { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
     
-    /* الزبون يمين كبير - التاريخ والمندوب يسار صغير */
     .invoice-info-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
     .cust-right { text-align: right; font-size: 22px; font-weight: 800; flex-grow: 1; }
     .meta-left { text-align: left; font-size: 11px; color: #444; line-height: 1.3; }
@@ -50,7 +49,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. إعدادات الربط بالإكسل ---
+# --- 2. إعدادات الربط ---
 SHEET_ID = "1-Abj-Kvbe02az8KYZfQL0eal2arKw_wgjVQdJX06IA0"
 GID_PRICES = "339292430"
 GID_DATA = "0"
@@ -100,20 +99,20 @@ USERS = {
     "احمد حسين حلباوي": "7722", "علي محمد حلباوي": "6600"
 }
 
-# --- إدارة الحالة ---
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'page' not in st.session_state: st.session_state.page = 'login'
 if 'temp_items' not in st.session_state: st.session_state.temp_items = []
 if 'confirmed' not in st.session_state: st.session_state.confirmed = False
 if 'receipt_view' not in st.session_state: st.session_state.receipt_view = False
 if 'is_sent' not in st.session_state: st.session_state.is_sent = False
-if 'search_query' not in st.session_state: st.session_state.search_query = ""
+# هذا المفتاح هو السر في تصفير الخانات
+if 'widget_id' not in st.session_state: st.session_state.widget_id = 0
 
 def convert_ar_nav(text):
     n_map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}
     return "".join(n_map.get(c, c) for c in text)
 
-# --- الواجهات ---
+# --- التطبيق ---
 if not st.session_state.logged_in:
     st.markdown('<div class="header-box"><h1>🔐 دخول المندوبين</h1></div>', unsafe_allow_html=True)
     user_sel = st.selectbox("إختر اسمك", ["-- اختر --"] + list(USERS.keys()))
@@ -133,6 +132,7 @@ elif st.session_state.page == 'home':
 
 elif st.session_state.page == 'order':
     if st.session_state.receipt_view:
+        # إيصال الاستلام (بقي كما هو في كودك)
         raw_total = sum(i["العدد"] * i["السعر"] for i in st.session_state.temp_items)
         h_val = float(convert_ar_nav(st.session_state.get('last_disc', '0')))
         total_after_disc = raw_total * (1 - h_val/100)
@@ -143,7 +143,7 @@ elif st.session_state.page == 'order':
         if st.button("🔙 العودة للفاتورة", use_container_width=True): st.session_state.receipt_view = False; st.rerun()
 
     else:
-        st.markdown(f'<h2 class="no-print" style="text-align:center;">رقم الفاتورة: {st.session_state.inv_no}</h2>', unsafe_allow_html=True)
+        st.markdown(f'<h2 class="no-print" style="text-align:center;">إدخال فاتورة رقم #{st.session_state.inv_no}</h2>', unsafe_allow_html=True)
         cust_dict = load_rep_customers(st.session_state.user_name)
         col_c1, col_c2 = st.columns(2)
         with col_c1:
@@ -157,17 +157,18 @@ elif st.session_state.page == 'order':
         st.session_state.last_cust, st.session_state.last_disc = cust, disc_input
         st.divider()
 
-        # تصفير البحث عند الإضافة
-        search_p = st.text_input("🔍 ابحث عن صنف...", value=st.session_state.search_query, key="prod_search")
+        # هنا نستخدم st.session_state.widget_id لتصفير الخانات
+        search_p = st.text_input("🔍 ابحث عن صنف...", key=f"search_{st.session_state.widget_id}")
         filtered_p = [p for p in PRODUCTS.keys() if search_p in p] if search_p else list(PRODUCTS.keys())
-        sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered_p)
-        qty_str = st.text_input("العدد")
+        sel_p = st.selectbox("اختر الصنف", ["-- اختر الصنف --"] + filtered_p, key=f"select_{st.session_state.widget_id}")
+        qty_str = st.text_input("العدد", key=f"qty_{st.session_state.widget_id}")
 
         if st.button("➕ إضافة صنف", use_container_width=True):
             if sel_p != "-- اختر الصنف --" and qty_str:
                 q = float(convert_ar_nav(qty_str))
                 st.session_state.temp_items.append({"الصنف": sel_p, "العدد": int(q), "السعر": PRODUCTS[sel_p]})
-                st.session_state.search_query = "" # مسح النص من البحث
+                # تغيير الـ ID يؤدي لمسح الخانات فوراً
+                st.session_state.widget_id += 1 
                 st.rerun()
 
         if st.button("👁️ معاينة الفاتورة", use_container_width=True, type="primary"): 
@@ -181,6 +182,7 @@ elif st.session_state.page == 'order':
             total_vat = sum(((i["العدد"] * i["السعر"]) * (1 - h_val/100)) * 0.11 for i in st.session_state.temp_items if "*" in i["الصنف"])
             final_net = total_after_disc + total_vat
 
+            # شكل الفاتورة النهائي
             st.markdown(f"""
                 <div class="invoice-preview">
                     <div class="company-header-center">
@@ -190,7 +192,7 @@ elif st.session_state.page == 'order':
                     
                     <div class="invoice-title-section">
                         <div class="invoice-main-title">فاتورة مبيعات</div>
-                        <div class="invoice-no-small">رقم الفاتورة: #{st.session_state.inv_no}</div>
+                        <div class="invoice-no-small">الرقم: #{st.session_state.inv_no}</div>
                     </div>
 
                     <div class="invoice-info-row">
@@ -220,7 +222,7 @@ elif st.session_state.page == 'order':
             with col_save:
                 if st.button("💾 حفظ وإرسال", use_container_width=True):
                     if send_to_google_sheets(f"{total_vat:.2f}", f"{raw_total:.2f}", st.session_state.inv_no, cust, st.session_state.user_name, datetime.now().strftime("%Y-%m-%d %H:%M")):
-                        st.session_state.is_sent = True; st.success("✅ تم الحفظ بنجاح")
+                        st.session_state.is_sent = True; st.success("✅ تم الحفظ")
             with col_print:
                 if st.button("🖨️ طباعة الفاتورة", use_container_width=True, disabled=not st.session_state.is_sent):
                     st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
